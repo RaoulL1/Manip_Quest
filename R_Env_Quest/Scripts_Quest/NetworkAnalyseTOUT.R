@@ -26,6 +26,12 @@ library(glasso)
 library(dplyr)
 library(conflicted) # pour forcer à utiliser un des package quand il y a un  conflit pour une fonction
 
+
+library("IsingSampler")
+library("IsingFit")
+library("NetworkComparisonTest" )
+
+
 conflict_prefer("alpha", "psych")
 #save.image("../R_Env_Quest/validity.RData")
 
@@ -407,7 +413,7 @@ Measure_imputed<-complete(imputation)
 ###
 ##
 # analyse lm --------------------------------
-
+"""
 library(ggeffects)
 ############D_cons_soi
 lm1_age_D1<-lm(D1_priv ~ A3_age_m, data = Measure_Network )
@@ -417,10 +423,10 @@ lm4_age_D1<-lm(D1_priv ~ log(A3_age_m), data = Measure_Network )
 
 anova(lm1_age_D1,lm2_age_D1,lm3_age_D1,lm4_age_D1)
 
-modtoplot=ggpredict(lm2_age_D1, c("A3_age_m[all]")) 
+modtoplot=ggpredict(lm2_age_D1, c('A3_age_m[all]')) 
 plot(modtoplot,rawdata = TRUE)
 
-modtoplot=ggpredict(lm4_age_D1, c("A3_age_m[all]")) 
+modtoplot=ggpredict(lm4_age_D1, c('A3_age_m[all]')) 
 plot(modtoplot,rawdata = TRUE)
 
 lm1_pub_D1<-lm(D1_priv ~ B_puberte, data = Measure_Network )
@@ -430,27 +436,27 @@ lm4_pub_D1<-lm(D1_priv ~ log(B_puberte), data = Measure_Network )
 
 anova(lm1_pub_D1,lm2_pub_D1,lm3_pub_D1,lm4_pub_D1)
 
-modtoplot=ggpredict(lm2_pub_D1, c("B_puberte[all]")) 
+modtoplot=ggpredict(lm2_pub_D1, c('B_puberte[all]')) 
 plot(modtoplot,rawdata = TRUE)
 
 
 lm2_age_D1_sexe<-lm(D1_priv ~ poly(A3_age_m,2)*A1_sexe, data = Measure_Network )
 anova(lm2_age_D1,lm2_age_D1_sexe)
-modtoplot=ggpredict(lm2_age_D1_sexe, c("A3_age_m[all]","A1_sexe")) 
+modtoplot=ggpredict(lm2_age_D1_sexe, c('A3_age_m[all]','A1_sexe')) 
 plot(modtoplot,rawdata = TRUE)
 
 
 
 ##recherche inflexion age puberté
 
-mod_age<-lm(D1_priv ~ poly(A3_age_m,2,raw=TRUE), data = subset(Measure_Network, A1_sexe == "1") )
-modtoplot=ggpredict(mod_age, c("A3_age_m[all]")) 
+mod_age<-lm(D1_priv ~ poly(A3_age_m,2,raw=TRUE), data = subset(Measure_Network, A1_sexe == '1') )
+modtoplot=ggpredict(mod_age, c('A3_age_m[all]')) 
 plot(modtoplot,rawdata = TRUE)
 
-sum_age<-summary(mod_age,ddf = "Kenward-Roger")
-a<-sum_age$coefficients["(Intercept)","Estimate"]
-b1<-sum_age$coefficients["poly(A3_age_m, 2, raw = TRUE)1","Estimate"]
-b2<-sum_age$coefficients["poly(A3_age_m, 2, raw = TRUE)2","Estimate"]
+sum_age<-summary(mod_age,ddf = 'Kenward-Roger')
+a<-sum_age$coefficients['(Intercept)','Estimate']
+b1<-sum_age$coefficients['poly(A3_age_m, 2, raw = TRUE)1','Estimate']
+b2<-sum_age$coefficients['poly(A3_age_m, 2, raw = TRUE)2','Estimate']
 
 f <- function(x) { a +(b1*x)+(b2*x^2) }
 curve(f(x),xlim = c(100,300))
@@ -461,14 +467,14 @@ curve(f_prime(x), xlim = c(100,300))
 p_inf1_RV2_touch_age<- (uniroot(f_prime, interval = c(150,300))[[1]])/12
 
 
-mod_pub<-lm(D1_priv ~ poly(B_puberte,2,raw=TRUE), data =  subset(Measure_Network, A1_sexe == "1") )
-modtoplot=ggpredict(mod_pub, c("B_puberte[all]")) 
+mod_pub<-lm(D1_priv ~ poly(B_puberte,2,raw=TRUE), data =  subset(Measure_Network, A1_sexe == '1') )
+modtoplot=ggpredict(mod_pub, c('B_puberte[all]')) 
 plot(modtoplot,rawdata = TRUE)
 
-sum_pub<-summary(mod_pub,ddf = "Kenward-Roger", raw = TRUE)
-a<-sum_pub$coefficients["(Intercept)","Estimate"]
-b1<-sum_pub$coefficients["poly(B_puberte, 2, raw = TRUE)1","Estimate"]
-b2<-sum_pub$coefficients["poly(B_puberte, 2, raw = TRUE)2","Estimate"]
+sum_pub<-summary(mod_pub,ddf = 'Kenward-Roger', raw = TRUE)
+a<-sum_pub$coefficients['(Intercept)','Estimate']
+b1<-sum_pub$coefficients['poly(B_puberte, 2, raw = TRUE)1','Estimate']
+b2<-sum_pub$coefficients['poly(B_puberte, 2, raw = TRUE)2','Estimate']
 
 f <- function(x) { a +(b1*x)+(b2*x^2) }
 curve(f(x), xlim = c(1,5))
@@ -489,13 +495,13 @@ anova(lm1_age_K6,lm2_age_K6,lm3_age_K6,lm4_age_K6)
 
 
 
-modtoplot=ggpredict(lm2_age_K6, c("A3_age_m[all]", "A1_sexe")) 
+modtoplot=ggpredict(lm2_age_K6, c('A3_age_m[all]', 'A1_sexe')) 
 plot(modtoplot,rawdata = TRUE)
 
-modtoplot=ggpredict(lm3_age_K6, c("A3_age_m[all]", "A1_sexe")) 
+modtoplot=ggpredict(lm3_age_K6, c('A3_age_m[all]', 'A1_sexe')) 
 plot(modtoplot,rawdata = TRUE)
 
-modtoplot=ggpredict(lm4_age_K6, c("A3_age_m[all]")) 
+modtoplot=ggpredict(lm4_age_K6, c('A3_age_m[all]')) 
 plot(modtoplot,rawdata = TRUE)
 
 lm1_pub_K6<-lm(K6_trust ~ B_puberte, data = Measure_Network )
@@ -506,16 +512,16 @@ lm4_pub_K6<-lm(K6_trust ~ log(B_puberte), data = Measure_Network )
 anova(lm1_pub_K6,lm2_pub_K6,lm3_pub_K6,lm4_pub_K6)
 anova(lm3_pub_K6)
 
-modtoplot=ggpredict(lm3_pub_K6, c("B_puberte[all]")) 
+modtoplot=ggpredict(lm3_pub_K6, c('B_puberte[all]')) 
 plot(modtoplot,rawdata = TRUE)
 
 
 lm2_age_K6_sexe<-lm(K6_trust ~ poly(A3_age_m,2)*A1_sexe, data = Measure_Network )
 anova(lm2_age_K6,lm2_age_K6_sexe)
-modtoplot=ggpredict(lm2_age_K6_sexe, c("A3_age_m[all]","A1_sexe")) 
+modtoplot=ggpredict(lm2_age_K6_sexe, c('A3_age_m[all]','A1_sexe')) 
 plot(modtoplot,rawdata = TRUE)
 
-
+"""
 
 
 
@@ -565,32 +571,19 @@ if (gb_red_nodes1$suggested_reductions == "No suggested reductions") {
   
 }
 
-#supp_overlap_imputed<-setdiff(names(Measure_imputed), names(Measure_Network))
+supprimer_overlap<-setdiff(names(Measure_imputed), names(Measure_Network))
 
 
 ##Remmetre les mesures réduite au bon endroit
 Measure_Network<-Measure_Network %>% select(order(colnames(Measure_Network)))
 
 ####utiliser dans raw seulement les colonnes qui reste après overlap
-
-
 Measure_Network_col<- colnames(Measure_Network)
 Measure_Network_raw <- Measures_bysub[, intersect(Measure_Network_col, colnames(Measures_bysub))]
 
 
-
-
-#!!!ici on va plutot utiliser le meme goldbricker que sur les data imputed pour garder les même variables
-#Measure_Network_raw <- net_reduce(data=Measures_bysub, badpairs=gb_dataset,method=c("best_goldbricker"))
 """
-gb_dataset_raw<-goldbricker(
-  Measures_bysub,
-  p = 0.05,
-  method = 'hittner2003',
-  threshold = 0.25,
-  corMin = 0.5,
-  progressbar = TRUE)
-
+NOrmalement doit donner no suggested reductio 
 gb_red_nodes1_raw<-goldbricker(
   Measure_Network_raw,
   p = 0.05,
@@ -599,11 +592,6 @@ gb_red_nodes1_raw<-goldbricker(
   corMin = 0.5,
   progressbar = TRUE)
 
-
-### 
-#ici ca va dépendre de ce qui sest passé au dessus pour les data imputed pour garder les mêmes variables
-#Measure_Network_raw <- net_reduce(data=Measure_Network_raw, badpairs=gb_red_nodes1_raw,method=c('best_goldbricker'))
-# supp_overlap_raw<-setdiff(names(Measures_bysub), names(Measure_Network_raw))
 """
 
 
@@ -660,17 +648,21 @@ for (col in names(Measure_Network_raw)) {
   colnames(Measure_Network_raw)[which(names(Measure_Network_raw) == col)] <- new_name
 }
 
-#supp_overlap_list<-list()
-#for (measure in supp_overlap_imputed) {
- # index <- which(names_list_pairs == measure)[1]
-#  index_new<-(index+1)
-#  mesure_name<-names_list_pairs[index_new]
-#  supp_overlap_list <- append(supp_overlap_list, mesure_name[1])
-#}
+
+#pour savoir automatiquement quelle mesure ont été supprimer 
+supp_overlap_list<-list()
+for (measure in supprimer_overlap) {
+  index <- which(names_list_pairs == measure)[1]
+  index_new<-(index+1)
+  mesure_name<-names_list_pairs[index_new]
+ supp_overlap_list <- append(supp_overlap_list, mesure_name[1])
+}
 
 
 # WHOLE net Age -------------------
- 
+
+# * Whole Age -------------------
+
 ###SUPPRESSION DES MESURES POUR NETWORK!!!!!!!!!!!!!!
 
 Measure_final_age<-subset(Measure_Network, select = - c(Puberty))
@@ -684,7 +676,7 @@ names(Measure_final_raw_age)
 
 longnamesnodes_age<-names(Measure_final_age)
 shortnames_nodes_age<- list()
-for (col in names(Measure_final)) {
+for (col in names(Measure_final_age)) {
   index <- which(names_list_pairs == col)[1]
   index_new<-(index+1)
   new_name<-names_list_pairs[index_new][1]
@@ -692,7 +684,7 @@ for (col in names(Measure_final)) {
 }
 
 names_groups_tot_age<- list()
-for (col in names(Measure_final)) {
+for (col in names(Measure_final_age)) {
   index <- which(names_list_pairs == col)[1]
   index_new<-(index+2)
   new_name<-names_list_pairs[index_new][1]
@@ -712,7 +704,8 @@ Measure_final_age.cor_raw<-cor_auto(Measure_final_raw_age) #compute the correlat
 
 ##### Network analysis
 
-png("Figures_Quest/Network_Whole_imputed.png", width=2000, height=1400)
+
+png("Figures_Quest/Network_Whole_imputed_age.png", width=2000, height=1400)
 graph_imputed_age<-qgraph(Measure_final_age.cor, graph="glasso", layout="spring",labels=shortnames_nodes_age,
                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_age),
                  border.width=0.1, border.color="#a8a8a8", minimum=.03, 
@@ -722,10 +715,11 @@ graph_imputed_age<-qgraph(Measure_final_age.cor, graph="glasso", layout="spring"
                  nodeNames=longnamesnodes_age)
 dev.off()
 
+Layeoutimputed<-averageLayout(graph_imputed_age)
 
-png("Figures_Quest/Network_Whole_raw.png", width=2000, height=1400)
-graph_raw_age<-qgraph(Measure_final_age.cor_raw, graph="glasso", layout="spring",labels=shortnames_nodes_age,
-                       vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final),
+png("Figures_Quest/Network_Whole_raw_age.png", width=2000, height=1400)
+graph_raw_age<-qgraph(Measure_final_age.cor_raw, graph="glasso", layout=Layeoutimputed,labels=shortnames_nodes_age,
+                       vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_age),
                        border.width=0.1, border.color="#a8a8a8", minimum=.03, 
                        groups=grSub1_age, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                               "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
@@ -746,10 +740,7 @@ dev.off()
 
 
 
-
-
-
-# WHOLE net Pub -------------------
+# * Whole Pub -------------------
 
 ###SUPPRESSION DES MESURES POUR NETWORK!!!!!!!!!!!!!!
 
@@ -793,7 +784,7 @@ Measure_final_pub.cor_raw<-cor_auto(Measure_final_pub_raw) #compute the correlat
 ##### Network analysis
 
 png("Figures_Quest/Network_Whole_imputed_pub.png", width=2000, height=1400)
-graph_imputed<-qgraph(Measure_final_pub.cor, graph="glasso", layout="spring",labels=shortnames_nodes_pub,
+graph_imputed<-qgraph(Measure_final_pub.cor, graph="glasso", layout=Layeoutimputed,labels=shortnames_nodes_pub,
                       vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_pub),
                       border.width=0.1, border.color="#a8a8a8", minimum=.03, 
                       groups=grSub1_pub, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
@@ -804,7 +795,7 @@ dev.off()
 
 
 png("Figures_Quest/Network_Whole_raw_pub.png", width=2000, height=1400)
-graph_raw<-qgraph(Measure_final_pub.cor_raw, graph="glasso", layout="spring",labels=shortnames_nodes_pub,
+graph_raw<-qgraph(Measure_final_pub.cor_raw, graph="glasso", layout=Layeoutimputed,labels=shortnames_nodes_pub,
                   vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_pub),
                   border.width=0.1, border.color="#a8a8a8", minimum=.03, 
                   groups=grSub1_pub, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
@@ -827,69 +818,61 @@ dev.off()
 
 
 
-# SEX network age -------------------
+
+
+
+# SEX comparaison  -------------------
 
 ############# division analyse par sex 
 
-Measure_Fem<- Measure_final_age[Measure_final_age$Sex == 1, ]
-Measure_Mal<- Measure_final_age[Measure_final_age$Sex == 2, ]
+Measure_Fem_0<- subset(Measure_final_age[Measure_final_age$Sex == 1, ], select = - c(Sex,Cisgender))
+Measure_Mal_0<- subset(Measure_final_age[Measure_final_age$Sex == 2, ], select = - c(Sex,Cisgender))
 
 #Measure_final_age_col<- colnames(Measure_final_age)
 #Measure_Fem_0 <- Measure_Fem[, intersect(Measure_final_age_col, colnames(Measure_Fem))]
 #Measure_Mal_0 <- Measure_Mal[, intersect(Measure_final_age_col, colnames(Measure_Mal))]
 
-Measure_Fem_0<-subset(Measure_Fem, select = - c(Sex))
-Measure_Mal_0<-subset(Measure_Mal, select = - c(Sex))
+# * Sex Check de l'overlap --------------
 
-# ** Check de l'overlap --------------
+Measure_Mal<-Measure_Mal_0
 
-gb_dataset_mal<-goldbricker(
-  Measure_Mal_0,
-  p = 0.05,
-  method = "hittner2003",
-  threshold = 0.25,
-  corMin = 0.5,
-  progressbar = TRUE)
+gb_dataset_mal <- data.frame(suggested_reductions = character(), stringsAsFactors = FALSE)
+nouvelle_ligne <- data.frame(suggested_reductions = "0", stringsAsFactors = FALSE)# Ajouter une ligne avec une valeur spécifique dans la colonne 'suggested_reductions'
+gb_dataset_mal <- rbind(gb_dataset_mal, nouvelle_ligne)
 
-Measure_Network_mal <- net_reduce(data=Measure_Mal, badpairs=gb_dataset_mal,method=c("best_goldbricker"))
+#gb_dataset_mal$suggested_reductions <- ""
 
-gb_dataset_fem<-goldbricker(
-  Measure_Fem_0,
-  p = 0.05,
-  method = "hittner2003",
-  threshold = 0.25,
-  corMin = 0.5,
-  progressbar = TRUE)
+while (gb_dataset_mal$suggested_reductions[1] != "No suggested reductions") {
+  gb_dataset_mal <- goldbricker(
+    Measure_Mal,
+    p = 0.05,
+    method = "hittner2003",
+    threshold = 0.30,
+    corMin = 0.5,
+    progressbar = TRUE
+      )
+  # Réduire le réseau avec les nouvelles suggestions de réduction
+  
+  if (gb_dataset_mal$suggested_reductions[1] == "No suggested reductions") {
+    break  # Sortir de la boucle
+  }
+  
+    Measure_Mal <- net_reduce(data = Measure_Mal, badpairs = gb_dataset_mal, method = c("best_goldbricker"))
 
-Measure_Network_mal <- net_reduce(data=Measure_Mal, badpairs=gb_dataset_mal,method=c("best_goldbricker"))
-
-
-
-
-
-
+}
 
 
 
+supprimer_overlap_mal<-setdiff(names(Measure_Mal_0), names(Measure_Mal))
 
+Measure_Network_sex_col<- colnames(Measure_Mal)
+Measure_Fem <- Measure_Fem_0[, intersect(Measure_Network_sex_col, colnames(Measure_Fem_0))]
 
-
-
-Measure_Fem<-subset(Measure_Fem, select = - c(Sex))
-Measure_Fem.cor<-cor_auto(Measure_Fem) #compute the correlation Matrix with qgraph Packages 
-
-Measure_Mal<-subset(Measure_Mal, select = - c(Sex))
-Measure_Mal.cor<-cor_auto(Measure_Mal) #compute the correlation Matrix with qgraph Packages 
-
-
-
-
-
+###label sex
 nodenames_sex<-names(Measure_Fem)
-
 labels_sex<- list()
 
-for (col in names(Measure_Fem)) {
+for (col in nodenames_sex) {
   index <- which(names_list_pairs == col)[1]
   index_new<-(index+1)
   new_name<-names_list_pairs[index_new][1]
@@ -897,7 +880,7 @@ for (col in names(Measure_Fem)) {
 }
 
 names_groups_sex<- list()
-for (col in names(Measure_Fem)) {
+for (col in nodenames_sex) {
   index <- which(names_list_pairs == col)[1]
   index_new<-(index+2)
   new_name<-names_list_pairs[index_new][1]
@@ -907,6 +890,10 @@ for (col in names(Measure_Fem)) {
 names_groups_unique<-unique(names_groups_sex)
 gr_sexe <- split(x = 1:length(names_groups_sex), f = unlist(names_groups_sex))
 
+
+# * Sex Network --------------
+Measure_Fem.cor<-cor_auto(Measure_Fem) #compute the correlation Matrix with qgraph Packages 
+Measure_Mal.cor<-cor_auto(Measure_Mal) #compute the correlation Matrix with qgraph Packages 
 
 png("Figures_Quest/Network_fem.png", width=2000, height=1400)
 graphFem<-qgraph(Measure_Fem.cor, graph="glasso", layout="spring",labels=labels_sex,
@@ -919,8 +906,10 @@ graphFem<-qgraph(Measure_Fem.cor, graph="glasso", layout="spring",labels=labels_
                   nodeNames=nodenames_sex)
 dev.off()
 
+layout_fem<-averageLayout(graphFem)
+
 png("Figures_Quest/Network_mal.png", width=2000, height=1400)
-graphMal<-qgraph(Measure_Mal.cor, graph="glasso", layout="spring",labels=labels_sex,
+graphMal<-qgraph(Measure_Mal.cor, graph="glasso", layout=layout_fem,labels=labels_sex,
                   maximum=.45,minimum=.03,tuning=0.25,
                   vsize=7, cut=0,sampleSize = nrow(Measure_Mal),
                   border.width=0.1, border.color="#a8a8a8", 
@@ -930,6 +919,295 @@ graphMal<-qgraph(Measure_Mal.cor, graph="glasso", layout="spring",labels=labels_
                   nodeNames=nodenames_sex)
 dev.off()
 
+# * Sex NCT  --------------
+
+
+NCTFemvsMal_fdr<-NCT(Measure_Fem, Measure_Mal, 
+                   it = 1000, # The number of iterations (permutations).
+                   binary.data=FALSE, 
+                   paired=FALSE, 
+                   weighted=TRUE, 
+                   abs=TRUE,
+                   test.edges=TRUE, 
+                   edges="all", 
+                   progressbar=TRUE, 
+                   make.positive.definite=TRUE,
+                   p.adjust.methods= c("fdr"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                   test.centrality=TRUE, 
+                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                   nodes="all",
+                   communities=gr_sexe,
+                   useCommunities="all",
+                   #estimator,
+                   #estimatorArgs = list(), 
+                   verbose = TRUE)
+
+
+
+
+p_diffstrenght_fdr <- NCTFemvsMal_fdr$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+p_globaledgeweight_fdr <- NCTFemvsMal_fdr$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+p_alledgeweight_fdr <- NCTFemvsMal_fdr$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_fdr <- as.data.frame(p_alledgeweight_fdr)
+names(p_alledgeweight_fdr)[3]<- 'pval'
+edgeweight_signi_fdr <- p_alledgeweight_fdr %>% dplyr::filter(pval < 0.050)
+
+
+p_allcent_fdr <- NCTFemvsMal_fdr$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_fdr<- as.data.frame(p_allcent_fdr)
+
+diffbetwee_signi_fdr_p<-rownames(p_allcent_fdr%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_fdr_p<-rownames(p_allcent_fdr%>% dplyr::filter(strength < 0.050))
+
+
+diffbetwee_signi_fdr <- subset(NCTFemvsMal_fdr$diffcen.real, row.names(NCTFemvsMal_fdr$diffcen.real) %in% diffbetwee_signi_fdr_p)
+diffstren_cent_signi_fdr <- subset(NCTFemvsMal_fdr$diffcen.real, row.names(NCTFemvsMal_fdr$diffcen.real) %in% diffstren_cent_signi_fdr_p)
+
+
+
+
+
+
+
+
+
+
+
+NCTFemvsMal_unco<-NCT(Measure_Fem, Measure_Mal, 
+                     it = 1000, # The number of iterations (permutations).
+                     binary.data=FALSE, 
+                     paired=FALSE, 
+                     weighted=TRUE, 
+                     abs=TRUE,
+                     test.edges=TRUE, 
+                     edges="all", 
+                     progressbar=TRUE, 
+                     make.positive.definite=TRUE,
+                     p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                     test.centrality=TRUE, 
+                     centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                     nodes="all",
+                     communities=gr_sexe,
+                     useCommunities="all",
+                     #estimator,
+                     #estimatorArgs = list(), 
+                     verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_unco <- NCTFemvsMal_unco$glstrinv.pval # 	 
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_unco <- NCTFemvsMal_unco$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+
+###test & trouver diff all edge weights.
+
+p_alledgeweight_unco <- NCTFemvsMal_unco$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_unco<- as.data.frame(p_alledgeweight)
+names(p_alledgeweight_unco)[3]<- 'pval'
+edgeweight_signi_unco_p <- p_alledgeweight_unco %>% dplyr::filter(pval < 0.050)
+
+
+NCTFemvsMal_unco$einv.real	
+
+###trouver diffférence de centralité
+p_allcent_unco <- NCTFemvsMal_unco$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_unco<- as.data.frame(p_allcent_unco)
+diffbetwee_signi_unco_p<-rownames(p_allcent_unco%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_unco_p<-rownames(p_allcent_unco%>% dplyr::filter(strength < 0.050))
+
+
+diffbetwee_signi_unco <- subset(NCTFemvsMal_unco$diffcen.real, row.names(NCTFemvsMal_unco$diffcen.real) %in% diffbetwee_signi_unco_p)
+diffstren_cent_signi_unco <- subset(NCTFemvsMal_unco$diffcen.real, row.names(NCTFemvsMal_unco$diffcen.real) %in% diffstren_cent_signi_unco_p)
+
+
+
+
+
+
+
+# PUB comparaison  -------------------
+
+Measure_final_pub<-subset(Measure_Network, select = - c(Age))
+
+cut_points <- quantile(Measure_final_pub$Puberty, probs = seq(0, 1, 0.25))
+
+Pub1 <- Measure_final_pub[Measure_final_pub$Puberty <= cut_points[[2]], ]
+Pub2 <- Measure_final_pub[Measure_final_pub$Puberty > cut_points[[2]] & Measure_final_pub$Puberty <= cut_points[[3]],]
+Pub3 <- Measure_final_pub[Measure_final_pub$Puberty > cut_points[[3]] & Measure_final_pub$Puberty <= cut_points[[4]],]
+Pub4 <- Measure_final_pub[Measure_final_pub$Puberty  > cut_points[[4]]& Measure_final_pub$Puberty <= cut_points[[5]],]
+
+
+
+Pub1<-subset(Pub1, select = - c(Puberty))
+Pub2<-subset(Pub2, select = - c(Puberty))
+Pub3<-subset(Pub3, select = - c(Puberty))
+Pub4<-subset(Pub4, select = - c(Puberty))
+
+
+
+
+gb_dataset_Pub1 <- goldbricker(
+  Pub1,
+  p = 0.05,
+  method = "hittner2003",
+  threshold = 0.30,
+  corMin = 0.5,
+  progressbar = TRUE
+)
+
+gb_dataset_Pub4 <- goldbricker(
+  Pub4,
+  p = 0.05,
+  method = "hittner2003",
+  threshold = 0.30,
+  corMin = 0.5,
+  progressbar = TRUE
+)
+
+
+
+
+
+# * NCT Puberty  -------------
+
+
+NCTPub1vsPub2<-NCT(Pub1, Pub2, 
+                   it = 1000, # The number of iterations (permutations).
+                   binary.data=FALSE, 
+                   paired=FALSE, 
+                   weighted=TRUE, 
+                   abs=TRUE,
+                   test.edges=TRUE, 
+                   edges="all", 
+                   progressbar=TRUE, 
+                   make.positive.definite=TRUE,
+                   p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                   test.centrality=TRUE, 
+                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                   nodes="all",
+                   communities=gr3,
+                   useCommunities="all",
+                   #estimator,
+                   #estimatorArgs = list(), 
+                   verbose = TRUE)
+
+
+
+p_diffstrenght_Pub1vs2 <- NCTPub1vsPub2$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+p_globaledgeweight_Pub1vs2  <- NCTPub1vsPub2$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+p_alledgeweight_Pub1vs2  <- NCTPub1vsPub2$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_Pub1vs2  <- as.data.frame(p_alledgeweight_Pub1vs2 )
+names(p_alledgeweight_Pub1vs2 )[3]<- 'pval'
+edgeweight_signi_Pub1vs2  <- p_alledgeweight_Pub1vs2  %>% dplyr::filter(pval < 0.050)
+
+
+p_allcent_Pub1vs2  <- NCTPub1vsPub2$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_Pub1vs2 <- as.data.frame(p_allcent_Pub1vs2 )
+
+
+diffbetwee_signi_fdr_p<-rownames(p_allcent_fdr%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_fdr_p<-rownames(p_allcent_fdr%>% dplyr::filter(strength < 0.050))
+
+
+diffbetwee_signi_fdr <- subset(NCTFemvsMal_fdr$diffcen.real, row.names(NCTFemvsMal_fdr$diffcen.real) %in% diffbetwee_signi_fdr_p)
+diffstren_cent_signi_fdr <- subset(NCTFemvsMal_fdr$diffcen.real, row.names(NCTFemvsMal_fdr$diffcen.real) %in% diffstren_cent_signi_fdr_p)
+
+
+
+
+
+
+
+
+NCTPub2vsPub3<-NCT(Pub2, Pub3, 
+                   it = 1000, # The number of iterations (permutations).
+                   binary.data=FALSE, 
+                   paired=FALSE, 
+                   weighted=TRUE, 
+                   abs=TRUE,
+                   test.edges=TRUE, 
+                   edges="all", 
+                   progressbar=TRUE, 
+                   make.positive.definite=TRUE,
+                   p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                   test.centrality=TRUE, 
+                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                   nodes="all",
+                   communities=gr3,
+                   useCommunities="all",
+                   #estimator,
+                   #estimatorArgs = list(), 
+                   verbose = TRUE)
+
+
+NCTPub3vsPub4<-NCT(Pub3, Pub4, 
+                   it = 1000, # The number of iterations (permutations).
+                   binary.data=FALSE, 
+                   paired=FALSE, 
+                   weighted=TRUE, 
+                   abs=TRUE,
+                   test.edges=TRUE, 
+                   edges="all", 
+                   progressbar=TRUE, 
+                   make.positive.definite=TRUE,
+                   p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                   test.centrality=TRUE, 
+                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                   nodes="all",
+                   communities=gr3,
+                   useCommunities="all",
+                   #estimator,
+                   #estimatorArgs = list(), 
+                   verbose = TRUE)
+
+
+NCTPub1vsPub3<-NCT(Pub1, Pub3, 
+                   it = 1000, # The number of iterations (permutations).
+                   binary.data=FALSE, 
+                   paired=FALSE, 
+                   weighted=TRUE, 
+                   abs=TRUE,
+                   test.edges=TRUE, 
+                   edges="all", 
+                   progressbar=TRUE, 
+                   make.positive.definite=TRUE,
+                   p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                   test.centrality=TRUE, 
+                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                   nodes="all",
+                   communities=gr3,
+                   useCommunities="all",
+                   #estimator,
+                   #estimatorArgs = list(), 
+                   verbose = TRUE)
+
+
+
+NCTPub2vsPub4<-NCT(Pub2, Pub4, 
+                   it = 1000, # The number of iterations (permutations).
+                   binary.data=FALSE, 
+                   paired=FALSE, 
+                   weighted=TRUE, 
+                   abs=TRUE,
+                   test.edges=TRUE, 
+                   edges="all", 
+                   progressbar=TRUE, 
+                   make.positive.definite=TRUE,
+                   p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                   test.centrality=TRUE, 
+                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                   nodes="all",
+                   communities=gr3,
+                   useCommunities="all",
+                   #estimator,
+                   #estimatorArgs = list(), 
+                   verbose = TRUE)
 
 
 
@@ -949,9 +1227,6 @@ dev.off()
 
 
 
-##################
-################## Age Fem 
-##################
 
 
 
@@ -963,36 +1238,6 @@ dev.off()
 
 
 
-
-
-
-
-
-
-
-cut_points <- quantile(Measure_Fem$Age, probs = seq(0, 1, 0.20))
-
-Fem1 <- Measure_Network[Measure_Network$Age <= cut_points[[2]], ]
-Fem2 <- Measure_Network[Measure_Network$Age > cut_points[[2]] & Measure_Network$Age <= cut_points[[3]],]
-Fem3 <- Measure_Network[Measure_Network$Age > cut_points[[3]] & Measure_Network$Age <= cut_points[[4]],]
-Fem4<- Measure_Network[Measure_Network$Age  > cut_points[[4]]& Measure_Network$Age <= cut_points[[5]],]
-Fem5<- Measure_Network[Measure_Network$Age >= cut_points[[5]],]
-
-
-Fem1<-subset(Fem1, select = - c(Age,Sex,Puberty,Cisgender))
-Fem1.cor<-cor_auto(Fem1) #compute the correlation Matrix with qgraph Packages 
-
-Fem2<-subset(Fem2, select = - c(Age,Sex,Puberty,Cisgender))
-Fem2.cor<-cor_auto(Fem2) #compute the correlation Matrix with qgraph Packages 
-
-Fem3<-subset(Fem3, select = - c(Age,Sex,Puberty,Cisgender))
-Fem3.cor<-cor_auto(Fem3) #compute the correlation Matrix with qgraph Packages 
-
-Fem4<-subset(Fem4, select = - c(Age,Sex,Puberty,Cisgender))
-Fem4.cor<-cor_auto(Fem4) #compute the correlation Matrix with qgraph Packages 
-
-Fem5<-subset(Fem5, select = - c(Age,Sex,Puberty,Cisgender))
-Fem5.cor<-cor_auto(Fem5) #compute the correlation Matrix with qgraph Packages 
 
 
 
@@ -1023,7 +1268,112 @@ grfemage <- split(x = 1:length(names_groups_tot), f = unlist(names_groups_tot))
 
 png("Figures_Quest/graphFem1.png", width=2000, height=1400)
 graphFem1<-qgraph(Fem1.cor, graph="glasso", layout="spring",labels=labels_femage,
-                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final),
+                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem1),
+                  border.width=0.1, border.color="#a8a8a8", minimum=.03, 
+                  groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                                           "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
+                  legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
+                  nodeNames=nodenamesfemages)
+dev.off()
+
+png("Figures_Quest/graphFem2.png", width=2000, height=1400)
+graphFem2<-qgraph(Fem2.cor, graph="glasso", layout="spring",labels=labels_femage,
+                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem2),
+                  border.width=0.1, border.color="#a8a8a8", minimum=.03, 
+                  groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                                           "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
+                  legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
+                  nodeNames=nodenamesfemages)
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# FEM & AGE -------------------------
+
+
+# DIFF AGE fem
+
+
+cut_points <- quantile(Measure_Fem_0$Age, probs = seq(0, 1, 0.20))
+
+Fem1 <- Measure_Network[Measure_Network$Age <= cut_points[[2]], ]
+Fem2 <- Measure_Network[Measure_Network$Age > cut_points[[2]] & Measure_Network$Age <= cut_points[[3]],]
+Fem3 <- Measure_Network[Measure_Network$Age > cut_points[[3]] & Measure_Network$Age <= cut_points[[4]],]
+Fem4<- Measure_Network[Measure_Network$Age  > cut_points[[4]]& Measure_Network$Age <= cut_points[[5]],]
+Fem5<- Measure_Network[Measure_Network$Age >= cut_points[[5]],]
+
+
+Fem1<-subset(Fem1, select = - c(Age,Puberty,Cisgender))
+Fem1.cor<-cor_auto(Fem1) #compute the correlation Matrix with qgraph Packages 
+
+Fem2<-subset(Fem2, select = - c(Age,Puberty,Cisgender))
+Fem2.cor<-cor_auto(Fem2) #compute the correlation Matrix with qgraph Packages 
+
+Fem3<-subset(Fem3, select = - c(Age,Puberty,Cisgender))
+Fem3.cor<-cor_auto(Fem3) #compute the correlation Matrix with qgraph Packages 
+
+Fem4<-subset(Fem4, select = - c(Age,Puberty,Cisgender))
+Fem4.cor<-cor_auto(Fem4) #compute the correlation Matrix with qgraph Packages 
+
+Fem5<-subset(Fem5, select = - c(Age,Puberty,Cisgender))
+Fem5.cor<-cor_auto(Fem5) #compute the correlation Matrix with qgraph Packages 
+
+
+nodenamesfemages<-names(Fem1)
+labels_femage<- list()
+for (col in names(Fem1)) {
+  index <- which(names_list_pairs == col)[1]
+  index_new<-(index+1)
+  new_name<-names_list_pairs[index_new][1]
+  labels_femage<-append(labels_femage, new_name[1])
+}
+
+names_groups_tot<- list()
+names_groups_unique<- list()
+
+for (col in names(Fem1)) {
+  index <- which(names_list_pairs == col)[1]
+  index_new<-(index+2)
+  new_name<-names_list_pairs[index_new][1]
+  names_groups_tot<-append(names_groups_tot, new_name[1])
+}
+
+names_groups_unique<-unique(names_groups_tot)
+grfemage <- split(x = 1:length(names_groups_tot), f = unlist(names_groups_tot))
+
+
+png("Figures_Quest/graphFem1.png", width=2000, height=1400)
+graphFem1<-qgraph(Fem1.cor, graph="glasso", layout="spring",labels=labels_femage,
+                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem1),
                   border.width=0.1, border.color="#a8a8a8", minimum=.03, 
                   groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                          "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
@@ -1033,7 +1383,7 @@ dev.off()
 
 png("Figures_Quest/graphFem2.png", width=2000, height=1400)
 graphFem2<-qgraph(Fem2.cor, graph="glasso", layout="spring",labels=labels_femage,
-                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final),
+                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem2),
                   border.width=0.1, border.color="#a8a8a8", minimum=.03, 
                   groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                          "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
@@ -1043,7 +1393,7 @@ dev.off()
 
 png("Figures_Quest/graphFem3.png", width=2000, height=1400)
 graphFem3<-qgraph(Fem3.cor, graph="glasso", layout="spring",labels=labels_femage,
-                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final),
+                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem3),
                   border.width=0.1, border.color="#a8a8a8", minimum=.03, 
                   groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                          "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
@@ -1053,7 +1403,7 @@ dev.off()
 
 png("Figures_Quest/graphFem4.png", width=2000, height=1400)
 graphFem4<-qgraph(Fem4.cor, graph="glasso", layout="spring",labels=labels_femage,
-                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final),
+                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem4),
                   border.width=0.1, border.color="#a8a8a8", minimum=.03, 
                   groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                          "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
@@ -1063,7 +1413,7 @@ dev.off()
 
 png("Figures_Quest/graphFem5.png", width=2000, height=1400)
 graphFem5<-qgraph(Fem5.cor, graph="glasso", layout="spring",labels=labels_femage,
-                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final),
+                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem5),
                   border.width=0.1, border.color="#a8a8a8", minimum=.03, 
                   groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                          "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
@@ -1084,11 +1434,6 @@ dev.off()
 ##########################
 
 
-
-
-library("IsingSampler")
-library("IsingFit")
-library("NetworkComparisonTest" )
 
 NCTFem1vsFem2<-NCT(Fem1, Fem2, 
                          it = 1000, # The number of iterations (permutations).
