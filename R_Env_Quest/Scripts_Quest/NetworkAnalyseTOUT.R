@@ -35,17 +35,42 @@ library("NetworkComparisonTest" )
 conflict_prefer("alpha", "psych")
 #save.image("../R_Env_Quest/validity.RData")
 
-##### 1 DATA 
-Item_bysub <- read.csv("../../Share/Analyses/Item_bysub_all.csv")
-dataglobal <- read.csv("../../Share/Analyses/exporterdansR.csv")
-miss_subscale_bcp<- read.csv("../../Share/Analyses/miss_subscale_bcp.csv")
+
+Item_bysub <- read.csv("../Analyses/Item_bysub_all.csv")
+dataglobal <- read.csv("../Analyses/exporterdansR.csv")
+miss_subscale_bcp<- read.csv("../Analyses/miss_subscale_bcp.csv")
+Measures_bysub<-read.csv("../Analyses/Measures_bysub.csv")
 
 
 
-# VALIDITY AND CONSISTENCY ------------------------------
+
+
+# Missing values by subscale ------------------------------
+
+
+###Visualiser les données manquantes
+vis_dat(Measures_bysub)
+gg_miss_var(Measures_bysub)
+gg_miss_fct(Measures_bysub, A1_sexe) 
+
+MCAR_measure<-mcar_test(Measures_bysub)
+
+
+# Imputer les valeurs manquantes avec la fonction "mice"
+n_imputations=10
+imputation <- mice(Measures_bysub, m= n_imputations, method = NULL, , ignore = NULL, where = NULL, , visitSequence = NULL, blots = NULL,
+                   post = NULL, maxit = 5, printFlag = TRUE,seed = NA, data.init = NULL)
+# Accéder aux données imputées pour la première imputation
+#imputed_data1 <- complete(imp, 1)
+#imputed_data2 <- complete(imp, 2)
+
+# Prends les données manquantes imputées et les rajoutes dans le dataframe original 
+Measure_imputed<-complete(imputation)
 
 
 
+
+# Validity and consistency  ------------------------------
 
 
 # Sélectionner les colonnes que vous souhaitez inclure dans le calcul de l'alpha de Cronbach
@@ -381,32 +406,6 @@ alpha(active,check.keys=TRUE) # 0.49 passage à  0.49 avec L1
 
 
 
-# Deal Missing values   ------------------------------
-
-Measures_bysub<-read.csv("../../Share/Analyses/Measures_bysub.csv")
-
-
-###Visualiser les données manquantes
-vis_dat(Measures_bysub)
-gg_miss_var(Measures_bysub)
-gg_miss_fct(Measures_bysub, A1_sexe) 
-
-MCAR_measure<-mcar_test(Measures_bysub)
-
-
-# Imputer les valeurs manquantes avec la fonction "mice"
-n_imputations=10
-imputation <- mice(Measures_bysub, m= n_imputations, method = NULL, , ignore = NULL, where = NULL, , visitSequence = NULL, blots = NULL,
-         post = NULL, maxit = 5, printFlag = TRUE,seed = NA, data.init = NULL)
-# Accéder aux données imputées pour la première imputation
-#imputed_data1 <- complete(imp, 1)
-#imputed_data2 <- complete(imp, 2)
-
-# Prends les données manquantes imputées et les rajoutes dans le dataframe original 
-Measure_imputed<-complete(imputation)
-
-
-
 
 
 
@@ -525,13 +524,6 @@ plot(modtoplot,rawdata = TRUE)
 
 
 
-
-
-
-
-
-
-
 # Topological overlap analysis ---------------------------------
 
 ##### on data imputed for missing values
@@ -582,17 +574,6 @@ Measure_Network_col<- colnames(Measure_Network)
 Measure_Network_raw <- Measures_bysub[, intersect(Measure_Network_col, colnames(Measures_bysub))]
 
 
-"""
-NOrmalement doit donner no suggested reductio 
-gb_red_nodes1_raw<-goldbricker(
-  Measure_Network_raw,
-  p = 0.05,
-  method = 'hittner2003',
-  threshold = 0.25,
-  corMin = 0.5,
-  progressbar = TRUE)
-
-"""
 
 
 # Noms--------------------------------
@@ -649,7 +630,8 @@ for (col in names(Measure_Network_raw)) {
 }
 
 
-#pour savoir automatiquement quelle mesure ont été supprimer 
+
+#pour savoir automatiquement quelle mesure ont été supprimées 
 supp_overlap_list<-list()
 for (measure in supprimer_overlap) {
   index <- which(names_list_pairs == measure)[1]
@@ -658,73 +640,77 @@ for (measure in supprimer_overlap) {
  supp_overlap_list <- append(supp_overlap_list, mesure_name[1])
 }
 
+#fonction pour préparerles labels et groupes pour network 
 
+extractlabelnet<- function (data)    {
+  
+      nodenames<-names(data)
+      labels<- list()
+
+    for (i in nodenames) {
+      index <- which(names_list_pairs == i)[1]
+      index_new<-(index+1)
+      new_name<-names_list_pairs[index_new][1]
+      labels<-append(labels, new_name[1])
+    }
+    
+    names_groups<- list()
+    for (j in nodenames) {
+      index <- which(names_list_pairs == j)[1]
+      index_new<-(index+2)
+      new_name<-names_list_pairs[index_new][1]
+      names_groups<-append(names_groups, new_name[1])
+    }
+    
+    names_groups_unique<-unique(names_groups)
+    gr<- split(x = 1:length(names_groups), f = unlist(names_groups))
+    
+    result<- list()
+    result[['nodeNames']]<-nodenames
+    result[['labels']]<-labels
+    result[['groups']]<-gr
+
+ return(result) 
+}
 # WHOLE net Age -------------------
 
 # * Whole Age -------------------
 
-###SUPPRESSION DES MESURES POUR NETWORK!!!!!!!!!!!!!!
+###SUPPRESSION DES MESURES 
 
 Measure_final_age<-subset(Measure_Network, select = - c(Puberty))
-names(Measure_final_age)
-
 Measure_final_raw_age<-subset(Measure_Network_raw, select = - c(Puberty))
-names(Measure_final_raw_age)
-
-
-### POUR OBTENIR GR1 index et nom de group
-
-longnamesnodes_age<-names(Measure_final_age)
-shortnames_nodes_age<- list()
-for (col in names(Measure_final_age)) {
-  index <- which(names_list_pairs == col)[1]
-  index_new<-(index+1)
-  new_name<-names_list_pairs[index_new][1]
-  shortnames_nodes_age<-append(shortnames_nodes_age, new_name[1])
-}
-
-names_groups_tot_age<- list()
-for (col in names(Measure_final_age)) {
-  index <- which(names_list_pairs == col)[1]
-  index_new<-(index+2)
-  new_name<-names_list_pairs[index_new][1]
-  names_groups_tot_age<-append(names_groups_tot_age, new_name[1])
-  }
-
-names_groups_unique_age<-unique(names_groups_tot_age)
-grSub1_age <- split(x = 1:length(names_groups_tot_age), f = unlist(names_groups_tot_age))
 
 
 ### Make correlation matrix
-cor_tot_age<-cor(Measure_final_age) #compute the correlation Matrix
 Measure_final_age.cor<-cor_auto(Measure_final_age) #compute the correlation Matrix with qgraph Packages 
-
-cor_tot_raw_age<-cor(Measure_final_raw_age) #compute the correlation Matrix
-Measure_final_age.cor_raw<-cor_auto(Measure_final_raw_age) #compute the correlation Matrix with qgraph Packages 
+Measure_final_raw_age.cor<-cor_auto(Measure_final_raw_age) #compute the correlation Matrix with qgraph Packages 
 
 ##### Network analysis
-
+label_whole_age<-extractlabelnet(Measure_final_age)
 
 png("Figures_Quest/Network_Whole_imputed_age.png", width=2000, height=1400)
-graph_imputed_age<-qgraph(Measure_final_age.cor, graph="glasso", layout="spring",labels=shortnames_nodes_age,
-                 vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_age),
-                 border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                 groups=grSub1_age, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
-                                        "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
-                 legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                 nodeNames=longnamesnodes_age)
+graph_imputed_age<-qgraph(Measure_final_age.cor, graph="glasso", layout="spring",labels=label_whole_age[['labels']],
+                          tuning=0.50, 
+                           vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_age),
+                           border.width=0.1, border.color="#a8a8a8", minimum=.03, 
+                           groups=label_whole_age[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                                                  "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
+                           legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
+                           nodeNames=label_whole_age[['nodeNames']])
 dev.off()
 
 Layeoutimputed<-averageLayout(graph_imputed_age)
 
 png("Figures_Quest/Network_Whole_raw_age.png", width=2000, height=1400)
-graph_raw_age<-qgraph(Measure_final_age.cor_raw, graph="glasso", layout=Layeoutimputed,labels=shortnames_nodes_age,
-                       vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_age),
+graph_raw_age<-qgraph(Measure_final_raw_age.cor, graph="glasso", layout=Layeoutimputed,labels=label_whole_age[['labels']],
+                      tuning=0.50,  
+                      vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_age),
                        border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                       groups=grSub1_age, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                       groups=label_whole_age[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                               "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
                        legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                       nodeNames=longnamesnodes_age)
+                       nodeNames=label_whole_age[['nodeNames']])
 dev.off()
 
 
@@ -745,63 +731,38 @@ dev.off()
 ###SUPPRESSION DES MESURES POUR NETWORK!!!!!!!!!!!!!!
 
 Measure_final_pub<-subset(Measure_Network, select = - c(Age))
-names(Measure_final_pub)
-
 Measure_final_pub_raw<-subset(Measure_Network_raw, select = - c(Age))
-names(Measure_final_pub_raw)
-
-
-### POUR OBTENIR GR1 index et nom de group
-
-longnamesnodes_pub<-names(Measure_final_pub)
-shortnames_nodes_pub<- list()
-for (col in names(Measure_final_pub)) {
-  index <- which(names_list_pairs == col)[1]
-  index_new<-(index+1)
-  new_name<-names_list_pairs[index_new][1]
-  shortnames_nodes_pub<-append(shortnames_nodes_pub, new_name[1])
-}
-
-names_groups_tot_pub<- list()
-for (col in names(Measure_final_pub)) {
-  index <- which(names_list_pairs == col)[1]
-  index_new<-(index+2)
-  new_name<-names_list_pairs[index_new][1]
-  names_groups_tot_pub<-append(names_groups_tot_pub, new_name[1])
-}
-
-names_groups_unique_pub<-unique(names_groups_tot_pub)
-grSub1_pub <- split(x = 1:length(names_groups_tot_pub), f = unlist(names_groups_tot_pub))
-
 
 ### Make correlation matrix
-cor_tot_pub<-cor(Measure_final_pub) #compute the correlation Matrix
 Measure_final_pub.cor<-cor_auto(Measure_final_pub) #compute the correlation Matrix with qgraph Packages 
-
-cor_tot_raw_pub<-cor(Measure_final_pub_raw) #compute the correlation Matrix
 Measure_final_pub.cor_raw<-cor_auto(Measure_final_pub_raw) #compute the correlation Matrix with qgraph Packages 
 
 ##### Network analysis
 
+label_whole_pub<-extractlabelnet(Measure_final_pub)
+
+
 png("Figures_Quest/Network_Whole_imputed_pub.png", width=2000, height=1400)
-graph_imputed<-qgraph(Measure_final_pub.cor, graph="glasso", layout=Layeoutimputed,labels=shortnames_nodes_pub,
+graph_imputed<-qgraph(Measure_final_pub.cor, graph="glasso", layout=Layeoutimputed,labels=label_whole_pub[['labels']],
+                      tuning=0.50, 
                       vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_pub),
                       border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                      groups=grSub1_pub, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                      groups=label_whole_pub[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                              "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
                       legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                      nodeNames=longnamesnodes_pub)
+                      nodeNames=label_whole_pub[['nodeNames']])
 dev.off()
 
 
 png("Figures_Quest/Network_Whole_raw_pub.png", width=2000, height=1400)
-graph_raw<-qgraph(Measure_final_pub.cor_raw, graph="glasso", layout=Layeoutimputed,labels=shortnames_nodes_pub,
+graph_raw<-qgraph(Measure_final_pub.cor_raw, graph="glasso", layout=Layeoutimputed,labels=label_whole_pub[['labels']],
+                  tuning=0.50, 
                   vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_pub),
                   border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                  groups=grSub1_pub, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                  groups=label_whole_pub[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                          "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
                   legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                  nodeNames=longnamesnodes_pub)
+                  nodeNames=label_whole_pub[['nodeNames']])
 dev.off()
 
 
@@ -825,26 +786,28 @@ dev.off()
 
 ############# division analyse par sex 
 
-Measure_Fem_0<- subset(Measure_final_age[Measure_final_age$Sex == 1, ], select = - c(Sex,Cisgender))
-Measure_Mal_0<- subset(Measure_final_age[Measure_final_age$Sex == 2, ], select = - c(Sex,Cisgender))
+Measure_Fem_age<- subset(Measure_final_age[Measure_final_age$Sex == 1, ], select = - c(Sex,Cisgender))
+Measure_Mal_age<- subset(Measure_final_age[Measure_final_age$Sex == 2, ], select = - c(Sex,Cisgender))
+
+Measure_Fem_pub<- subset(Measure_final_pub[Measure_final_pub$Sex == 1, ], select = - c(Sex,Cisgender))
+Measure_Mal_pub<- subset(Measure_final_pub[Measure_final_pub$Sex == 2, ], select = - c(Sex,Cisgender))
+
 
 #Measure_final_age_col<- colnames(Measure_final_age)
-#Measure_Fem_0 <- Measure_Fem[, intersect(Measure_final_age_col, colnames(Measure_Fem))]
-#Measure_Mal_0 <- Measure_Mal[, intersect(Measure_final_age_col, colnames(Measure_Mal))]
+#Measure_Fem_age <- Measure_Fem[, intersect(Measure_final_age_col, colnames(Measure_Fem))]
+#Measure_Mal_age <- Measure_Mal[, intersect(Measure_final_age_col, colnames(Measure_Mal))]
 
-# * Sex Check de l'overlap --------------
+# * Sex Check de l'overlap en boucle  --------------
 
-Measure_Mal<-Measure_Mal_0
+Measure_Mal_age_net<-Measure_Mal_age
 
-gb_dataset_mal <- data.frame(suggested_reductions = character(), stringsAsFactors = FALSE)
-nouvelle_ligne <- data.frame(suggested_reductions = "0", stringsAsFactors = FALSE)# Ajouter une ligne avec une valeur spécifique dans la colonne 'suggested_reductions'
-gb_dataset_mal <- rbind(gb_dataset_mal, nouvelle_ligne)
+gb_dataset_mal <- list('','')
+gb_dataset_mal['suggested_reductions'] <- list('')
 
-#gb_dataset_mal$suggested_reductions <- ""
-
+ 
 while (gb_dataset_mal$suggested_reductions[1] != "No suggested reductions") {
   gb_dataset_mal <- goldbricker(
-    Measure_Mal,
+    Measure_Mal_age_net,
     p = 0.05,
     method = "hittner2003",
     threshold = 0.30,
@@ -857,19 +820,438 @@ while (gb_dataset_mal$suggested_reductions[1] != "No suggested reductions") {
     break  # Sortir de la boucle
   }
   
-    Measure_Mal <- net_reduce(data = Measure_Mal, badpairs = gb_dataset_mal, method = c("best_goldbricker"))
+  Measure_Mal_age_net <- net_reduce(data = Measure_Mal_age_net, badpairs = gb_dataset_mal, method = c("best_goldbricker"))
 
 }
 
+supprimer_overlap_mal<-setdiff(names(Measure_Mal_age), names(Measure_Mal_age_net))
+
+Measure_Network_sex_col<- colnames(Measure_Mal_age_net)
+Measure_Fem_age_net <- Measure_Fem_age[, intersect(Measure_Network_sex_col, colnames(Measure_Fem_age))]
 
 
-supprimer_overlap_mal<-setdiff(names(Measure_Mal_0), names(Measure_Mal))
+# * Sex NCT  --------------
 
-Measure_Network_sex_col<- colnames(Measure_Mal)
-Measure_Fem <- Measure_Fem_0[, intersect(Measure_Network_sex_col, colnames(Measure_Fem_0))]
+
+# *** none gam50 nonabs----------------------------
+
+NCTFemvsMal_nocorr_50_nonabs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
+                               gamma=0.50,
+                               it = 1000, # The number of iterations (permutations).
+                               binary.data=FALSE, 
+                               paired=FALSE, 
+                               weighted=TRUE, 
+                               abs=FALSE,
+                               test.edges=TRUE, 
+                               edges="all", 
+                               progressbar=TRUE, 
+                               make.positive.definite=TRUE,
+                               p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                               test.centrality=TRUE, 
+                               centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                               nodes="all",
+                               communities=gr_sexe,
+                               useCommunities="all",
+                               #estimator,
+                               #estimatorArgs = list(), 
+                               verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_nocorr_50_nonabs <- NCTFemvsMal_nocorr_50_nonabs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_nocorr_50_nonabs <- NCTFemvsMal_nocorr_50_nonabs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+###test & trouver diff all edge weights.
+p_alledgeweight_nocorr_50_nonabs <- NCTFemvsMal_nocorr_50_nonabs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_nocorr_50_nonabs <- as.data.frame(p_alledgeweight_nocorr_50_nonabs)
+names(p_alledgeweight_nocorr_50_nonabs)[3]<- 'pval'
+edgeweight_signi_nocorr_50_nonabs <- p_alledgeweight_nocorr_50_nonabs %>% dplyr::filter(pval < 0.050) ##############"!!!!!!!!!!!!
+
+which(names(Measure_Fem_age_net)=='Body_Objectification')
+NCTFemvsMal_nocorr_50_nonabs$einv.real[11,23]
+
+###trouver diffférence de centralité
+p_allcent_nocorr_50_nonabs <- NCTFemvsMal_nocorr_50_nonabs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_nocorr_50_nonabs<- as.data.frame(p_allcent_nocorr_50_nonabs)
+diffbetwee_signi_nocorr_50_nonabs_p<-rownames(p_allcent_nocorr_50_nonabs%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_nocorr_50_nonabs_p<-rownames(p_allcent_nocorr_50_nonabs%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_nocorr_50_nonabs <- subset(NCTFemvsMal_nocorr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_nocorr_50_nonabs$diffcen.real) %in% diffbetwee_signi_nocorr_50_nonabs_p)
+diffstren_cent_signi_nocorr_50_nonabs <- subset(NCTFemvsMal_nocorr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_nocorr_50_nonabs$diffcen.real) %in% diffstren_cent_signi_fdr_50_nonabs_p)
+
+
+
+# *** none gam25 nonabs----------------------------
+
+NCTFemvsMal_nocorr_25_nonabs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
+                                  gamma=0.25,
+                                  it = 1000, # The number of iterations (permutations).
+                                  binary.data=FALSE, 
+                                  paired=FALSE, 
+                                  weighted=TRUE, 
+                                  abs=FALSE,
+                                  test.edges=TRUE, 
+                                  edges="all", 
+                                  progressbar=TRUE, 
+                                  make.positive.definite=TRUE,
+                                  p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                                  test.centrality=TRUE, 
+                                  centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                                  nodes="all",
+                                  communities=gr_sexe,
+                                  useCommunities="all",
+                                  #estimator,
+                                  #estimatorArgs = list(), 
+                                  verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_nocorr_25_nonabs <- NCTFemvsMal_nocorr_25_nonabs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_nocorr_25_nonabs <- NCTFemvsMal_nocorr_25_nonabs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+###test & trouver diff all edge weights.
+p_alledgeweight_nocorr_25_nonabs <- NCTFemvsMal_nocorr_25_nonabs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_nocorr_25_nonabs <- as.data.frame(p_alledgeweight_nocorr_25_nonabs)
+names(p_alledgeweight_nocorr_25_nonabs)[3]<- 'pval'
+edgeweight_signi_nocorr_25_nonabs <- p_alledgeweight_nocorr_25_nonabs %>% dplyr::filter(pval < 0.05) ##############"!!!!!!!!!!!!
+
+
+
+###trouver diffférence de centralité
+p_allcent_nocorr_25_nonabs <- NCTFemvsMal_nocorr_25_nonabs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_nocorr_25_nonabs<- as.data.frame(p_allcent_nocorr_25_nonabs)
+diffbetwee_signi_nocorr_25_nonabs_p<-rownames(p_allcent_nocorr_25_nonabs%>% dplyr::filter(betweenness  < 0.05 ))
+diffstren_cent_signi_nocorr_25_nonabs_p<-rownames(p_allcent_nocorr_25_nonabs%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_nocorr_25_nonabs <- subset(NCTFemvsMal_nocorr_25_nonabs$diffcen.real, row.names(NCTFemvsMal_nocorr_25_nonabs$diffcen.real) %in% diffbetwee_signi_nocorr_25_nonabs_p)
+diffstren_cent_signi_nocorr_25_nonabs <- subset(NCTFemvsMal_nocorr_25_nonabs$diffcen.real, row.names(NCTFemvsMal_nocorr_25_nonabs$diffcen.real) %in% diffstren_cent_signi_fdr_25_nonabs_p)
+
+
+
+# *** FDR gam50 nonabs----------------------------
+
+NCTFemvsMal_fdr_50_nonabs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
+                               gamma=0.50,
+                               it = 10000, # The number of iterations (permutations).
+                               binary.data=FALSE, 
+                               paired=FALSE, 
+                               weighted=TRUE, 
+                               abs=FALSE,
+                               test.edges=TRUE, 
+                               edges="all", 
+                               progressbar=TRUE, 
+                               make.positive.definite=TRUE,
+                               p.adjust.methods= c("BH"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                               test.centrality=TRUE, 
+                               centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                               nodes="all",
+                               communities=gr_sexe,
+                               useCommunities="all",
+                               #estimator,
+                               #estimatorArgs = list(), 
+                               verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+###test & trouver diff all edge weights.
+p_alledgeweight_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_fdr_50_nonabs <- as.data.frame(p_alledgeweight_fdr_50_nonabs)
+names(p_alledgeweight_fdr_50_nonabs)[3]<- 'pval'
+edgeweight_signi_fdr_50_nonabs <- p_alledgeweight_fdr_50_nonabs %>% dplyr::filter(pval < 0.050) ##############"!!!!!!!!!!!!
+
+which(names(Measure_Fem_age_net)=='Body_Objectification')
+NCTFemvsMal_fdr_50_nonabs$einv.real[11,23]
+
+###trouver diffférence de centralité
+p_allcent_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_fdr_50_nonabs<- as.data.frame(p_allcent_fdr_50_nonabs)
+diffbetwee_signi_fdr_50_nonabs_p<-rownames(p_allcent_fdr_50_nonabs%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_fdr_50_nonabs_p<-rownames(p_allcent_fdr_50_nonabs%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_fdr_50_nonabs <- subset(NCTFemvsMal_fdr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_fdr_50_nonabs$diffcen.real) %in% diffbetwee_signi_fdr_50_nonabs_p)
+diffstren_cent_signi_fdr_50_nonabs <- subset(NCTFemvsMal_fdr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_fdr_50_nonabs$diffcen.real) %in% diffstren_cent_signi_fdr_50_nonabs_p)
+
+
+
+
+# *** FDR gam25 nonabs ----------------------------
+
+
+NCTFemvsMal_fdr_25_nonabs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
+                               gamma=0.25,
+                               it = 1000, # The number of iterations (permutations).
+                               binary.data=FALSE, 
+                               paired=FALSE, 
+                               weighted=TRUE, 
+                               abs=FALSE,
+                               test.edges=TRUE, 
+                               edges="all", 
+                               progressbar=TRUE, 
+                               make.positive.definite=TRUE,
+                               p.adjust.methods= c("BH"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                               test.centrality=TRUE, 
+                               centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                               nodes="all",
+                               communities=gr_sexe,
+                               useCommunities="all",
+                               #estimator,
+                               #estimatorArgs = list(), 
+                               verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_fdr_25_nonabs <- NCTFemvsMal_fdr_25_nonabs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_fdr_25_nonabs <- NCTFemvsMal_fdr_25_nonabs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+###test & trouver diff all edge weights.
+p_alledgeweight_fdr_25_nonabs <- NCTFemvsMal_fdr_25_nonabs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_fdr_25_nonabs <- as.data.frame(p_alledgeweight_fdr_25_nonabs)
+names(p_alledgeweight_fdr_25_nonabs)[3]<- 'pval'
+edgeweight_signi_fdr_25_nonabs <- p_alledgeweight_fdr_25_nonabs %>% dplyr::filter(pval < 0.050)
+
+###trouver diffférence de centralité
+p_allcent_fdr_25_nonabs <- NCTFemvsMal_fdr_25_nonabs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_fdr_25_nonabs<- as.data.frame(p_allcent_fdr_25_nonabs)
+diffbetwee_signi_fdr_25_nonabs_p<-rownames(p_allcent_fdr_25_nonabs%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_fdr_25_nonabs_p<-rownames(p_allcent_fdr_25_nonabs%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_fdr_25_nonabs <- subset(NCTFemvsMal_fdr_25_nonabs$diffcen.real, row.names(NCTFemvsMal_fdr_25_nonabs$diffcen.real) %in% diffbetwee_signi_fdr_25_nonabs_p)
+diffstren_cent_signi_fdr_25_nonabs <- subset(NCTFemvsMal_fdr_25_nonabs$diffcen.real, row.names(NCTFemvsMal_fdr_25_nonabs$diffcen.real) %in% diffstren_cent_signi_fdr_25_nonabs_p)
+
+
+
+
+
+
+
+
+
+
+
+
+# *** FDR gam10 nonabs----------------------------
+
+NCTFemvsMal_fdr_10_nonabs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
+                               gamma=0.10,
+                               it = 1000, # The number of iterations (permutations).
+                               binary.data=FALSE, 
+                               paired=FALSE, 
+                               weighted=TRUE, 
+                               abs=FALSE,
+                               test.edges=TRUE, 
+                               edges="all", 
+                               progressbar=TRUE, 
+                               make.positive.definite=TRUE,
+                               p.adjust.methods= c("fdr"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                               test.centrality=TRUE, 
+                               centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                               nodes="all",
+                               communities=gr_sexe,
+                               useCommunities="all",
+                               #estimator,
+                               #estimatorArgs = list(), 
+                               verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_fdr_10_nonabs <- NCTFemvsMal_fdr_10_nonabs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_fdr_10_nonabs <- NCTFemvsMal_fdr_10_nonabs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+###test & trouver diff all edge weights.
+p_alledgeweight_fdr_10_nonabs <- NCTFemvsMal_fdr_10_nonabs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_fdr_10_nonabs <- as.data.frame(p_alledgeweight_fdr_10_nonabs)
+names(p_alledgeweight_fdr_10_nonabs)[3]<- 'pval'
+edgeweight_signi_fdr_10_nonabs <- p_alledgeweight_fdr_10_nonabs %>% dplyr::filter(pval < 0.050)
+
+###trouver diffférence de centralité
+p_allcent_fdr_10_nonabs <- NCTFemvsMal_fdr_10_nonabs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_fdr_10_nonabs<- as.data.frame(p_allcent_fdr_10_nonabs)
+diffbetwee_signi_fdr_10_nonabs_p<-rownames(p_allcent_fdr_10_nonabs%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_fdr_10_nonabs_p<-rownames(p_allcent_fdr_10_nonabs%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_fdr_10_nonabs <- subset(NCTFemvsMal_fdr_10_nonabs$diffcen.real, row.names(NCTFemvsMal_fdr_10_nonabs$diffcen.real) %in% diffbetwee_signi_fdr_10_nonabs_p)
+diffstren_cent_signi_fdr_10_nonabs <- subset(NCTFemvsMal_fdr_10_nonabs$diffcen.real, row.names(NCTFemvsMal_fdr_10_nonabs$diffcen.real) %in% diffstren_cent_signi_fdr_10_nonabs_p)
+
+
+
+
+
+# *** FDR gam10  abs----------------------------
+
+
+NCTFemvsMal_fdr_10_abs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
+                            gamma=0.10,
+                            it = 1000, # The number of iterations (permutations).
+                            binary.data=FALSE, 
+                            paired=FALSE, 
+                            weighted=TRUE, 
+                            abs=TRUE,
+                            test.edges=TRUE, 
+                            edges="all", 
+                            progressbar=TRUE, 
+                            make.positive.definite=TRUE,
+                            p.adjust.methods= c("fdr"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                            test.centrality=TRUE, 
+                            centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                            nodes="all",
+                            communities=gr_sexe,
+                            useCommunities="all",
+                            #estimator,
+                            #estimatorArgs = list(), 
+                            verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_fdr_10_abs <- NCTFemvsMal_fdr_10_abs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_fdr_10_abs <- NCTFemvsMal_fdr_10_abs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+###test & trouver diff all edge weights.
+p_alledgeweight_fdr_10_abs <- NCTFemvsMal_fdr_10_abs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_fdr_10_abs <- as.data.frame(p_alledgeweight_fdr_10_abs)
+names(p_alledgeweight_fdr_10_abs)[3]<- 'pval'
+edgeweight_signi_fdr_10_abs <- p_alledgeweight_fdr_10_abs %>% dplyr::filter(pval < 0.050)
+
+###trouver diffférence de centralité
+p_allcent_fdr_10_abs <- NCTFemvsMal_fdr_10_abs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_fdr_10_abs<- as.data.frame(p_allcent_fdr_10_abs)
+diffbetwee_signi_fdr_10_abs_p<-rownames(p_allcent_fdr_10_abs%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_fdr_10_abs_p<-rownames(p_allcent_fdr_10_abs%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_fdr_10_abs <- subset(NCTFemvsMal_fdr_10_abs$diffcen.real, row.names(NCTFemvsMal_fdr_10_abs$diffcen.real) %in% diffbetwee_signi_fdr_10_abs_p)
+diffstren_cent_signi_fdr_10_abs <- subset(NCTFemvsMal_fdr_10_abs$diffcen.real, row.names(NCTFemvsMal_fdr_10_abs$diffcen.real) %in% diffstren_cent_signi_fdr_10_abs_p)
+
+
+
+# *** FDR gam25 abs----------------------------
+
+NCTFemvsMal_fdr_25_abs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
+                     gamma=0.25,
+                     it = 1000, # The number of iterations (permutations).
+                     binary.data=FALSE, 
+                     paired=FALSE, 
+                     weighted=TRUE, 
+                     abs=TRUE,
+                     test.edges=TRUE, 
+                     edges="all", 
+                     progressbar=TRUE, 
+                     make.positive.definite=TRUE,
+                     p.adjust.methods= c("fdr"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                     test.centrality=TRUE, 
+                     centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                     nodes="all",
+                     communities=gr_sexe,
+                     useCommunities="all",
+                     #estimator,
+                     #estimatorArgs = list(), 
+                     verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_fdr_25_abs <- NCTFemvsMal_fdr_25_abs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_fdr_25_abs <- NCTFemvsMal_fdr_25_abs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+###test & trouver diff all edge weights.
+p_alledgeweight_fdr_25_abs <- NCTFemvsMal_fdr_25_abs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_fdr_25_abs <- as.data.frame(p_alledgeweight_fdr_25_abs)
+names(p_alledgeweight_fdr_25_abs)[3]<- 'pval'
+edgeweight_signi_fdr_25_abs <- p_alledgeweight_fdr_25_abs %>% dplyr::filter(pval < 0.050)
+
+###trouver diffférence de centralité
+p_allcent_fdr_25_abs <- NCTFemvsMal_fdr_25_abs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_fdr_25_abs<- as.data.frame(p_allcent_fdr_25_abs)
+diffbetwee_signi_fdr_25_abs_p<-rownames(p_allcent_fdr_25_abs%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_fdr_25_abs_p<-rownames(p_allcent_fdr_25_abs%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_fdr_25_abs <- subset(NCTFemvsMal_fdr_25_abs$diffcen.real, row.names(NCTFemvsMal_fdr_25_abs$diffcen.real) %in% diffbetwee_signi_fdr_25_abs_p)
+diffstren_cent_signi_fdr_25_abs <- subset(NCTFemvsMal_fdr_25_abs$diffcen.real, row.names(NCTFemvsMal_fdr_25_abs$diffcen.real) %in% diffstren_cent_signi_fdr_25_abs_p)
+
+# *** FDR gam50 abs----------------------------
+
+
+NCTFemvsMal_fdr_50_abs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
+                            gamma=0.50,
+                            it = 1000, # The number of iterations (permutations).
+                            binary.data=FALSE, 
+                            paired=FALSE, 
+                            weighted=TRUE, 
+                            abs=TRUE,
+                            test.edges=TRUE, 
+                            edges="all", 
+                            progressbar=TRUE, 
+                            make.positive.definite=TRUE,
+                            p.adjust.methods= c("fdr"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                            test.centrality=TRUE, 
+                            centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                            nodes="all",
+                            communities=gr_sexe,
+                            useCommunities="all",
+                            #estimator,
+                            #estimatorArgs = list(), 
+                            verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_fdr_50_abs <- NCTFemvsMal_fdr_50_abs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_fdr_50_abs <- NCTFemvsMal_fdr_50_abs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+###test & trouver diff all edge weights.
+p_alledgeweight_fdr_50_abs <- NCTFemvsMal_fdr_50_abs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_fdr_50_abs <- as.data.frame(p_alledgeweight_fdr_50_abs)
+names(p_alledgeweight_fdr_50_abs)[3]<- 'pval'
+edgeweight_signi_fdr_50_abs <- p_alledgeweight_fdr_50_abs %>% dplyr::filter(pval < 0.050) ##############"!!!!!!!!!!!!
+
+which(names(Measure_Fem_age_net)=='Body_Objectification')
+NCTFemvsMal_fdr_50_abs$einv.real[11,23]
+
+###trouver diffférence de centralité
+p_allcent_fdr_50_abs <- NCTFemvsMal_fdr_50_abs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_fdr_50_abs<- as.data.frame(p_allcent_fdr_50_abs)
+diffbetwee_signi_fdr_50_abs_p<-rownames(p_allcent_fdr_50_abs%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_fdr_50_abs_p<-rownames(p_allcent_fdr_50_abs%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_fdr_50_abs <- subset(NCTFemvsMal_fdr_50_abs$diffcen.real, row.names(NCTFemvsMal_fdr_50_abs$diffcen.real) %in% diffbetwee_signi_fdr_50_abs_p)
+diffstren_cent_signi_fdr_50_abs <- subset(NCTFemvsMal_fdr_50_abs$diffcen.real, row.names(NCTFemvsMal_fdr_50_abs$diffcen.real) %in% diffstren_cent_signi_fdr_50_abs_p)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# * Sex Plot Network --------------
+
 
 ###label sex
-nodenames_sex<-names(Measure_Fem)
+nodenames_sex<-names(Measure_Fem_age_net)
 labels_sex<- list()
 
 for (col in nodenames_sex) {
@@ -891,17 +1273,17 @@ names_groups_unique<-unique(names_groups_sex)
 gr_sexe <- split(x = 1:length(names_groups_sex), f = unlist(names_groups_sex))
 
 
-# * Sex Network --------------
-Measure_Fem.cor<-cor_auto(Measure_Fem) #compute the correlation Matrix with qgraph Packages 
-Measure_Mal.cor<-cor_auto(Measure_Mal) #compute the correlation Matrix with qgraph Packages 
+Measure_Fem_age_net.cor<-cor_auto(Measure_Fem_age_net) #compute the correlation Matrix with qgraph Packages 
+Measure_Mal_age_net.cor<-cor_auto(Measure_Mal_age_net) #compute the correlation Matrix with qgraph Packages 
 
 png("Figures_Quest/Network_fem.png", width=2000, height=1400)
-graphFem<-qgraph(Measure_Fem.cor, graph="glasso", layout="spring",labels=labels_sex,
-                  maximum=.45,minimum=.03,tuning=0.25,
-                  vsize=7, cut=0,  sampleSize = nrow(Measure_Fem),
+graphFem<-qgraph(Measure_Fem_age_net.cor, graph="glasso", layout="spring",labels=labels_sex,
+                 tuning=0.250,
+                  maximum=.25,minimum=.0,
+                  vsize=7, cut=0,  sampleSize = nrow(Measure_Fem_age_net),
                   border.width=0.1, border.color="#a8a8a8",  
                   groups=gr_sexe, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
-                                           "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
+                                           "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),
                   legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
                   nodeNames=nodenames_sex)
 dev.off()
@@ -909,61 +1291,20 @@ dev.off()
 layout_fem<-averageLayout(graphFem)
 
 png("Figures_Quest/Network_mal.png", width=2000, height=1400)
-graphMal<-qgraph(Measure_Mal.cor, graph="glasso", layout=layout_fem,labels=labels_sex,
-                  maximum=.45,minimum=.03,tuning=0.25,
-                  vsize=7, cut=0,sampleSize = nrow(Measure_Mal),
+graphMal<-qgraph(Measure_Mal_age_net.cor, graph="glasso", layout=layout_fem,labels=labels_sex,
+                 tuning=0.250,
+                  maximum=.25,minimum=.0,
+                  vsize=7, cut=0,sampleSize = nrow(Measure_Mal_age_net),
                   border.width=0.1, border.color="#a8a8a8", 
                   groups=gr_sexe, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
-                                           "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
+                                           "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),
                   legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
                   nodeNames=nodenames_sex)
 dev.off()
 
-# * Sex NCT  --------------
 
-
-NCTFemvsMal_fdr<-NCT(Measure_Fem, Measure_Mal, 
-                   it = 1000, # The number of iterations (permutations).
-                   binary.data=FALSE, 
-                   paired=FALSE, 
-                   weighted=TRUE, 
-                   abs=TRUE,
-                   test.edges=TRUE, 
-                   edges="all", 
-                   progressbar=TRUE, 
-                   make.positive.definite=TRUE,
-                   p.adjust.methods= c("fdr"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
-                   test.centrality=TRUE, 
-                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
-                   nodes="all",
-                   communities=gr_sexe,
-                   useCommunities="all",
-                   #estimator,
-                   #estimatorArgs = list(), 
-                   verbose = TRUE)
-
-
-
-
-p_diffstrenght_fdr <- NCTFemvsMal_fdr$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
-
-p_globaledgeweight_fdr <- NCTFemvsMal_fdr$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
-
-p_alledgeweight_fdr <- NCTFemvsMal_fdr$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
-p_alledgeweight_fdr <- as.data.frame(p_alledgeweight_fdr)
-names(p_alledgeweight_fdr)[3]<- 'pval'
-edgeweight_signi_fdr <- p_alledgeweight_fdr %>% dplyr::filter(pval < 0.050)
-
-
-p_allcent_fdr <- NCTFemvsMal_fdr$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
-p_allcent_fdr<- as.data.frame(p_allcent_fdr)
-
-diffbetwee_signi_fdr_p<-rownames(p_allcent_fdr%>% dplyr::filter(betweenness  < 0.050 ))
-diffstren_cent_signi_fdr_p<-rownames(p_allcent_fdr%>% dplyr::filter(strength < 0.050))
-
-
-diffbetwee_signi_fdr <- subset(NCTFemvsMal_fdr$diffcen.real, row.names(NCTFemvsMal_fdr$diffcen.real) %in% diffbetwee_signi_fdr_p)
-diffstren_cent_signi_fdr <- subset(NCTFemvsMal_fdr$diffcen.real, row.names(NCTFemvsMal_fdr$diffcen.real) %in% diffstren_cent_signi_fdr_p)
+sum(graphMal$Edgelist$weight)  ## 2.167981
+sum(graphFem$Edgelist$weight)  ## 3.417337
 
 
 
@@ -975,53 +1316,6 @@ diffstren_cent_signi_fdr <- subset(NCTFemvsMal_fdr$diffcen.real, row.names(NCTFe
 
 
 
-NCTFemvsMal_unco<-NCT(Measure_Fem, Measure_Mal, 
-                     it = 1000, # The number of iterations (permutations).
-                     binary.data=FALSE, 
-                     paired=FALSE, 
-                     weighted=TRUE, 
-                     abs=TRUE,
-                     test.edges=TRUE, 
-                     edges="all", 
-                     progressbar=TRUE, 
-                     make.positive.definite=TRUE,
-                     p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
-                     test.centrality=TRUE, 
-                     centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
-                     nodes="all",
-                     communities=gr_sexe,
-                     useCommunities="all",
-                     #estimator,
-                     #estimatorArgs = list(), 
-                     verbose = TRUE)
-
-
-### test diff global strength.
-p_diffstrenght_unco <- NCTFemvsMal_unco$glstrinv.pval # 	 
-
-###test diff maximum difference in edge weights.
-p_globaledgeweight_unco <- NCTFemvsMal_unco$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
-
-
-###test & trouver diff all edge weights.
-
-p_alledgeweight_unco <- NCTFemvsMal_unco$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
-p_alledgeweight_unco<- as.data.frame(p_alledgeweight)
-names(p_alledgeweight_unco)[3]<- 'pval'
-edgeweight_signi_unco_p <- p_alledgeweight_unco %>% dplyr::filter(pval < 0.050)
-
-
-NCTFemvsMal_unco$einv.real	
-
-###trouver diffférence de centralité
-p_allcent_unco <- NCTFemvsMal_unco$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
-p_allcent_unco<- as.data.frame(p_allcent_unco)
-diffbetwee_signi_unco_p<-rownames(p_allcent_unco%>% dplyr::filter(betweenness  < 0.050 ))
-diffstren_cent_signi_unco_p<-rownames(p_allcent_unco%>% dplyr::filter(strength < 0.050))
-
-
-diffbetwee_signi_unco <- subset(NCTFemvsMal_unco$diffcen.real, row.names(NCTFemvsMal_unco$diffcen.real) %in% diffbetwee_signi_unco_p)
-diffstren_cent_signi_unco <- subset(NCTFemvsMal_unco$diffcen.real, row.names(NCTFemvsMal_unco$diffcen.real) %in% diffstren_cent_signi_unco_p)
 
 
 
@@ -1029,24 +1323,121 @@ diffstren_cent_signi_unco <- subset(NCTFemvsMal_unco$diffcen.real, row.names(NCT
 
 
 
-# PUB comparaison  -------------------
+
+
+
+# création fonction comparaison --------------------
+
+
+CompNet<- function (data, critere,methode , nbsep='default' ,cutlist='default', gam=0.25,abso,corr,nbit=100)
+{
+  if (methode== "limite")  {
+    nbsep <-length(cutlist)-1
+    cut_points <- cutlist }
+  if (methode== "proportion"){ 
+    sep=1/nbsep
+    cut_points <- quantile(data[[critere]], probs = seq(0, 1, sep))
+  } 
+  
+  Subset <- list() 
+  Subset[[1]]<- subset(data[data[[critere]] <= cut_points[[2]],],select = -which(names(data) == critere)) 
+  
+  
+  for (i in 2:nbsep){
+    Subset[[i]] <- subset(data[data[[critere]] > cut_points[[i]] & data[[critere]] <= cut_points[[i+1]], ],select = -which(names(data) == critere))    
+  }
+  
+  pairs <-combn(1:nbsep, 2)
+  pairs_list <- split(pairs, rep(1:ncol(pairs), each = nrow(pairs)))
+  
+  NCT_list<- list()
+  NCT_list[['parameters']] <- paste0(critere, nbsep,cutlist, gam,abso,corr,nbit, sep = "_")
+  NCT_list[['pval_invariance']]<- list()
+  NCT_list[['pval_globalstenght']]<- list()
+  NCT_list[['pval_cent_betwee']]<- list()
+  NCT_list[['pval_cent_stren']]<- list()
+  
+  
+  k=0
+  
+  for (pair in pairs_list) {
+    k=k+1
+    nbA<-pair[[1]][1]
+    nbB<-pair[[2]][1]
+    
+    NCTpair<-NCT(Subset[[nbA]], Subset[[nbB]], 
+                 gamma=gam,
+                 it = nbit, # The number of iterations (permutations).
+                 binary.data=FALSE, 
+                 paired=FALSE, 
+                 weighted=TRUE, 
+                 abs=abso,
+                 test.edges=TRUE, 
+                 edges="all", 
+                 progressbar=TRUE, 
+                 make.positive.definite=TRUE,
+                 p.adjust.methods= c(corr), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                 test.centrality=TRUE, 
+                 centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                 nodes="all",
+                 #communities=gr3,
+                 useCommunities="all",
+                 #estimator,
+                 #estimatorArgs = list(), 
+                 verbose = TRUE)
+    
+    
+    NCT_list$pval_invariance[[k]]<-NCTpair$nwinv.pval
+    NCT_list$pval_globalstenght[[k]]<-NCTpair$glstrinv.pval
+    
+    p_allcent <- NCTpair$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+    p_allcent <- as.data.frame(p_allcent )
+    diffbetwee_p<-rownames(p_allcent%>% dplyr::filter(betweenness  < 0.050 ))
+    diffstren_p<-rownames(p_allcent%>% dplyr::filter(strength < 0.050))
+    
+    diffbetwee <- subset(NCTpair$diffcen.real, row.names(NCTpair$diffcen.real) %in% diffbetwee_p)
+    diffstren<- subset(NCTpair$diffcen.real, row.names(NCTpair$diffcen.real) %in% diffstren_p)
+    
+    NCT_list$pval_cent_betwee[[k]]<-diffbetwee
+    NCT_list$pval_cent_stren[[k]]<-diffstren_p
+    
+    NCT_list[[ paste0(cut_points[nbA+1],"vs",cut_points[nbB+1])]]<-NCTpair
+    
+    print(NCTpair$glstrinv.pval)
+    print(diffbetwee)
+    print(diffstren_p)
+    
+  }
+  
+  return(NCT_list)
+  
+}
+
+
+
+
+
+
+
+
+
+# PUB comparaison 4 niveau -------------------
 
 Measure_final_pub<-subset(Measure_Network, select = - c(Age))
 
 cut_points <- quantile(Measure_final_pub$Puberty, probs = seq(0, 1, 0.25))
 
+
 Pub1 <- Measure_final_pub[Measure_final_pub$Puberty <= cut_points[[2]], ]
 Pub2 <- Measure_final_pub[Measure_final_pub$Puberty > cut_points[[2]] & Measure_final_pub$Puberty <= cut_points[[3]],]
 Pub3 <- Measure_final_pub[Measure_final_pub$Puberty > cut_points[[3]] & Measure_final_pub$Puberty <= cut_points[[4]],]
-Pub4 <- Measure_final_pub[Measure_final_pub$Puberty  > cut_points[[4]]& Measure_final_pub$Puberty <= cut_points[[5]],]
-
+Pub4 <- Measure_final_pub[Measure_final_pub$Puberty  > cut_points[[4]],]
 
 
 Pub1<-subset(Pub1, select = - c(Puberty))
 Pub2<-subset(Pub2, select = - c(Puberty))
 Pub3<-subset(Pub3, select = - c(Puberty))
 Pub4<-subset(Pub4, select = - c(Puberty))
-
 
 
 
@@ -1069,13 +1460,30 @@ gb_dataset_Pub4 <- goldbricker(
 )
 
 
+Pub1.cor<-cor_auto(Pub1) #compute the correlation Matrix with qgraph Packages 
+Pub4.cor<-cor_auto(Pub4) #compute the correlation Matrix with qgraph Packages 
 
 
 
-# * NCT Puberty  -------------
 
 
-NCTPub1vsPub2<-NCT(Pub1, Pub2, 
+
+qgraph(Pub1.cor, graph="glasso", layout="spring",labels=labels_sex,
+       maximum=.45,minimum=.03,tuning=0.25,
+       vsize=7, cut=0,  sampleSize = nrow(Pub1),
+       border.width=0.1, border.color="#a8a8a8",  
+       groups=gr_sexe, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                               "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
+       legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
+       nodeNames=nodenames_sex)
+
+
+
+
+
+# **  Pub1vs2  -------------
+
+NCTPub1vs2<-NCT(Pub1, Pub2, 
                    it = 1000, # The number of iterations (permutations).
                    binary.data=FALSE, 
                    paired=FALSE, 
@@ -1096,36 +1504,33 @@ NCTPub1vsPub2<-NCT(Pub1, Pub2,
                    verbose = TRUE)
 
 
+### test diff global strength.
+p_diffstrenght_Pub1vs2 <- NCTPub1vs2$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
 
-p_diffstrenght_Pub1vs2 <- NCTPub1vsPub2$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+### test diff global edge weight
+p_globaledgeweight_Pub1vs2  <- NCTPub1vs2$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
 
-p_globaledgeweight_Pub1vs2  <- NCTPub1vsPub2$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
 
-p_alledgeweight_Pub1vs2  <- NCTPub1vsPub2$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+###test & trouver diff all edge weights.
+p_alledgeweight_Pub1vs2  <- NCTPub1vs2$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
 p_alledgeweight_Pub1vs2  <- as.data.frame(p_alledgeweight_Pub1vs2 )
 names(p_alledgeweight_Pub1vs2 )[3]<- 'pval'
 edgeweight_signi_Pub1vs2  <- p_alledgeweight_Pub1vs2  %>% dplyr::filter(pval < 0.050)
 
-
-p_allcent_Pub1vs2  <- NCTPub1vsPub2$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+###trouver diffférence de centralité
+p_allcent_Pub1vs2  <- NCTPub1vs2$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
 p_allcent_Pub1vs2 <- as.data.frame(p_allcent_Pub1vs2 )
+diffbetwee_signi_Pub1vs2_p<-rownames(p_allcent_Pub1vs2%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_Pub1vs2_p<-rownames(p_allcent_Pub1vs2%>% dplyr::filter(strength < 0.050))
 
-
-diffbetwee_signi_fdr_p<-rownames(p_allcent_fdr%>% dplyr::filter(betweenness  < 0.050 ))
-diffstren_cent_signi_fdr_p<-rownames(p_allcent_fdr%>% dplyr::filter(strength < 0.050))
-
-
-diffbetwee_signi_fdr <- subset(NCTFemvsMal_fdr$diffcen.real, row.names(NCTFemvsMal_fdr$diffcen.real) %in% diffbetwee_signi_fdr_p)
-diffstren_cent_signi_fdr <- subset(NCTFemvsMal_fdr$diffcen.real, row.names(NCTFemvsMal_fdr$diffcen.real) %in% diffstren_cent_signi_fdr_p)
+diffbetwee_signi_Pub1vs2 <- subset(NCTPub1vs2$diffcen.real, row.names(NCTPub1vs2$diffcen.real) %in% diffbetwee_signi_Pub1vs2_p)
+diffstren_cent_signi_Pub1vs2 <- subset(NCTPub1vs2$diffcen.real, row.names(NCTPub1vs2$diffcen.real) %in% diffstren_cent_signi_Pub1vs2_p)
 
 
 
+# **  Pub2vs3  -------------
 
-
-
-
-
-NCTPub2vsPub3<-NCT(Pub2, Pub3, 
+NCTPub2vs3<-NCT(Pub2, Pub3, 
                    it = 1000, # The number of iterations (permutations).
                    binary.data=FALSE, 
                    paired=FALSE, 
@@ -1144,6 +1549,33 @@ NCTPub2vsPub3<-NCT(Pub2, Pub3,
                    #estimator,
                    #estimatorArgs = list(), 
                    verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_Pub2vs3 <- NCTPub2vs3$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+### test diff global edge weight
+p_globaledgeweight_Pub2vs3  <- NCTPub2vs3$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+
+###test & trouver diff all edge weights.
+p_alledgeweight_Pub2vs3  <- NCTPub2vs3$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_Pub2vs3  <- as.data.frame(p_alledgeweight_Pub2vs3 )
+names(p_alledgeweight_Pub2vs3 )[3]<- 'pval'
+edgeweight_signi_Pub2vs3  <- p_alledgeweight_Pub2vs3  %>% dplyr::filter(pval < 0.050)
+
+###trouver diffférence de centralité
+p_allcent_Pub2vs3  <- NCTPub2vs3$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_Pub2vs3 <- as.data.frame(p_allcent_Pub2vs3 )
+diffbetwee_signi_Pub2vs3_p<-rownames(p_allcent_Pub2vs3%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_Pub2vs3_p<-rownames(p_allcent_Pub2vs3%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_Pub2vs3 <- subset(NCTPub2vs3$diffcen.real, row.names(NCTPub2vs3$diffcen.real) %in% diffbetwee_signi_Pub2vs3_p)
+diffstren_cent_signi_Pub2vs3 <- subset(NCTPub2vs3$diffcen.real, row.names(NCTPub2vs3$diffcen.real) %in% diffstren_cent_signi_Pub2vs3_p)
+
+
+
+# **  Pub3vs4  -------------
 
 
 NCTPub3vsPub4<-NCT(Pub3, Pub4, 
@@ -1165,49 +1597,106 @@ NCTPub3vsPub4<-NCT(Pub3, Pub4,
                    #estimator,
                    #estimatorArgs = list(), 
                    verbose = TRUE)
-
-
-NCTPub1vsPub3<-NCT(Pub1, Pub3, 
-                   it = 1000, # The number of iterations (permutations).
-                   binary.data=FALSE, 
-                   paired=FALSE, 
-                   weighted=TRUE, 
-                   abs=TRUE,
-                   test.edges=TRUE, 
-                   edges="all", 
-                   progressbar=TRUE, 
-                   make.positive.definite=TRUE,
-                   p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
-                   test.centrality=TRUE, 
-                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
-                   nodes="all",
-                   communities=gr3,
-                   useCommunities="all",
-                   #estimator,
-                   #estimatorArgs = list(), 
-                   verbose = TRUE)
+summary(NCTPub3vsPub4)
 
 
 
-NCTPub2vsPub4<-NCT(Pub2, Pub4, 
-                   it = 1000, # The number of iterations (permutations).
-                   binary.data=FALSE, 
-                   paired=FALSE, 
-                   weighted=TRUE, 
-                   abs=TRUE,
-                   test.edges=TRUE, 
-                   edges="all", 
-                   progressbar=TRUE, 
-                   make.positive.definite=TRUE,
-                   p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
-                   test.centrality=TRUE, 
-                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
-                   nodes="all",
-                   communities=gr3,
-                   useCommunities="all",
-                   #estimator,
-                   #estimatorArgs = list(), 
-                   verbose = TRUE)
+# **  Pub1vs3  -------------
+
+
+
+NCTPub1vs3<-NCT(Pub1, Pub3, 
+                it = 1000, # The number of iterations (permutations).
+                binary.data=FALSE, 
+                paired=FALSE, 
+                weighted=TRUE, 
+                abs=TRUE,
+                test.edges=TRUE, 
+                edges="all", 
+                progressbar=TRUE, 
+                make.positive.definite=TRUE,
+                p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                test.centrality=TRUE, 
+                centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                nodes="all",
+                communities=gr3,
+                useCommunities="all",
+                #estimator,
+                #estimatorArgs = list(), 
+                verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_Pub1vs3 <- NCTPub1vs3$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+### test diff global edge weight
+p_globaledgeweight_Pub1vs3  <- NCTPub1vs3$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+
+###test & trouver diff all edge weights.
+p_alledgeweight_Pub1vs3  <- NCTPub1vs3$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_Pub1vs3  <- as.data.frame(p_alledgeweight_Pub1vs3 )
+names(p_alledgeweight_Pub1vs3 )[3]<- 'pval'
+edgeweight_signi_Pub1vs3  <- p_alledgeweight_Pub1vs3  %>% dplyr::filter(pval < 0.050)
+
+###trouver diffférence de centralité
+p_allcent_Pub1vs3  <- NCTPub1vs3$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_Pub1vs3 <- as.data.frame(p_allcent_Pub1vs3 )
+diffbetwee_signi_Pub1vs3_p<-rownames(p_allcent_Pub1vs3%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_Pub1vs3_p<-rownames(p_allcent_Pub1vs3%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_Pub1vs3 <- subset(NCTPub1vs3$diffcen.real, row.names(NCTPub1vs3$diffcen.real) %in% diffbetwee_signi_Pub1vs3_p)
+diffstren_cent_signi_Pub1vs3 <- subset(NCTPub1vs3$diffcen.real, row.names(NCTPub1vs3$diffcen.real) %in% diffstren_cent_signi_Pub1vs3_p)
+
+
+
+# **  Pub1vs4  -------------
+
+
+
+NCTPub1vs4<-NCT(Pub1, Pub4, 
+                it = 1000, # The number of iterations (permutations).
+                binary.data=FALSE, 
+                paired=FALSE, 
+                weighted=TRUE, 
+                abs=TRUE,
+                test.edges=TRUE, 
+                edges="all", 
+                progressbar=TRUE, 
+                make.positive.definite=TRUE,
+                p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                test.centrality=TRUE, 
+                centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                nodes="all",
+                communities=gr3,
+                useCommunities="all",
+                #estimator,
+                #estimatorArgs = list(), 
+                verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_Pub1vs4 <- NCTPub1vs4$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+### test diff global edge weight
+p_globaledgeweight_Pub1vs4  <- NCTPub1vs4$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+
+###test & trouver diff all edge weights.
+p_alledgeweight_Pub1vs4  <- NCTPub1vs4$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_Pub1vs4  <- as.data.frame(p_alledgeweight_Pub1vs4 )
+names(p_alledgeweight_Pub1vs4 )[3]<- 'pval'
+edgeweight_signi_Pub1vs4  <- p_alledgeweight_Pub1vs4  %>% dplyr::filter(pval < 0.050)
+
+###trouver diffférence de centralité
+p_allcent_Pub1vs4  <- NCTPub1vs4$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_Pub1vs4 <- as.data.frame(p_allcent_Pub1vs4 )
+diffbetwee_signi_Pub1vs4_p<-rownames(p_allcent_Pub1vs4%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_Pub1vs4_p<-rownames(p_allcent_Pub1vs4%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_Pub1vs4 <- subset(NCTPub1vs4$diffcen.real, row.names(NCTPub1vs4$diffcen.real) %in% diffbetwee_signi_Pub1vs4_p)
+diffstren_cent_signi_Pub1vs4 <- subset(NCTPub1vs4$diffcen.real, row.names(NCTPub1vs4$diffcen.real) %in% diffstren_cent_signi_Pub1vs4_p)
+
 
 
 
@@ -1323,7 +1812,7 @@ dev.off()
 # DIFF AGE fem
 
 
-cut_points <- quantile(Measure_Fem_0$Age, probs = seq(0, 1, 0.20))
+cut_points <- quantile(Measure_Fem_age$Age, probs = seq(0, 1, 0.20))
 
 Fem1 <- Measure_Network[Measure_Network$Age <= cut_points[[2]], ]
 Fem2 <- Measure_Network[Measure_Network$Age > cut_points[[2]] & Measure_Network$Age <= cut_points[[3]],]
@@ -1425,105 +1914,32 @@ dev.off()
 
 
 
+# Age NCT --------------
+
+FemetMal_Age_2_gam25_true_none_100<-CompNet(data=Measure_final_age,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+FemetMal_Age_3_gam25_true_none_100<-CompNet(data=Measure_final_age,critere="Age",nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+FemetMal_Age_4_gam25_true_none_100<-CompNet(data=Measure_final_age,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+FemetMal_Age_5_gam25_true_none_100<-CompNet(data=Measure_final_age,critere='Age',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+
+FemetMal_Pub_2_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+FemetMal_Pub_3_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+FemetMal_Pub_4_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+FemetMal_Pub_5_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
 
 
 
-##########################
-########################      NetworkComparisonTest: 
-##########################
-##########################
+# Fem et Age --------------
+
+
+###!!!!!!!!!!!!!!!! significatif
+Fem_Age_4_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_4_gam50_false_none_1000<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = FALSE,corr="none",nbit = 1000,gam=0.50)
+Fem_Age_4_gam50_false_fdr_1000<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = FALSE,corr="fdr",nbit = 1000,gam=0.50)
 
 
 
-NCTFem1vsFem2<-NCT(Fem1, Fem2, 
-                         it = 1000, # The number of iterations (permutations).
-                         binary.data=FALSE, 
-                         paired=FALSE, 
-                         weighted=TRUE, 
-                         abs=TRUE,
-                         test.edges=TRUE, 
-                         edges="all", 
-                         progressbar=TRUE, 
-                         make.positive.definite=TRUE,
-                         p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
-                         test.centrality=TRUE, 
-                         centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
-                         nodes="all",
-                         communities=gr3,
-                         useCommunities="all",
-                         #estimator,
-                         #estimatorArgs = list(), 
-                         verbose = TRUE)
-summaryFem1vsFem2<-summary(NCTFem1vsFem2)
-
-
-NCTFem2vsFem3<-NCT(Fem2, Fem3, 
-                   it = 1000, # The number of iterations (permutations).
-                   binary.data=FALSE, 
-                   paired=FALSE, 
-                   weighted=TRUE, 
-                   abs=TRUE,
-                   test.edges=TRUE, 
-                   edges="all", 
-                   progressbar=TRUE, 
-                   make.positive.definite=TRUE,
-                   p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
-                   test.centrality=TRUE, 
-                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
-                   nodes="all",
-                   communities=gr3,
-                   useCommunities="all",
-                   #estimator,
-                   #estimatorArgs = list(), 
-                   verbose = TRUE)
-summaryFem2vsFem3<-summary(NCTFem2vsFem3)
-
-
-
-
-NCTFem3vsFem4<-NCT(Fem3, Fem4, 
-                   it = 1000, # The number of iterations (permutations).
-                   binary.data=FALSE, 
-                   paired=FALSE, 
-                   weighted=TRUE, 
-                   abs=TRUE,
-                   test.edges=TRUE, 
-                   edges="all", 
-                   progressbar=TRUE, 
-                   make.positive.definite=TRUE,
-                   p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
-                   test.centrality=TRUE, 
-                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
-                   nodes="all",
-                   communities=gr3,
-                   useCommunities="all",
-                   #estimator,
-                   #estimatorArgs = list(), 
-                   verbose = TRUE)
-summaryFem3vsFem4<-summary(NCTFem3vsFem4)
-
-
-
-NCTFem4vsFem5<-NCT(Fem4, Fem5, 
-                   it = 1000, # The number of iterations (permutations).
-                   binary.data=FALSE, 
-                   paired=FALSE, 
-                   weighted=TRUE, 
-                   abs=TRUE,
-                   test.edges=TRUE, 
-                   edges="all", 
-                   progressbar=TRUE, 
-                   make.positive.definite=TRUE,
-                   p.adjust.methods= c("none"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
-                   test.centrality=TRUE, 
-                   centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
-                   nodes="all",
-                   communities=gr3,
-                   useCommunities="all",
-                   #estimator,
-                   #estimatorArgs = list(), 
-                   verbose = TRUE)
-summaryFem4vsFem5<-summary(NCTFem4vsFem5)
+Fem_Age_cut3_gam50_false_none_1000<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist3,abso = FALSE,corr="none",nbit = 1000,gam=0.50) 
+Fem_Age_cut3_gam50_false_none_1000<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist3,abso = FALSE,corr="fdr",nbit = 1000,gam=0.50) 
 
 
 
@@ -1531,17 +1947,60 @@ summaryFem4vsFem5<-summary(NCTFem4vsFem5)
 
 
 
+Fem_Age_3_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=3,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
+##diffff 
+
+
+Fem_Age_2_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Age_3_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Age_4_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Age_5_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
 
 
 
+Fem_Age_2_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=2,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_5_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=5,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
+
+Fem_Pub_2_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Pub_3_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Pub_4_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Pub_5_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+
+Fem_Age_2_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_3_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_4_gam50_true_none_100<-CompNet(data=Measure_Fem,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_5_gam50_true_none_100<-CompNet(data=Measure_Fem,critere='Age',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+
+Fem_Pub_2_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Pub_3_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Pub_4_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Pub_5_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
 
 
+cutlist1<-c(108,162,204,246,300)
+cutlist2<-c(108,144,168,192,216,240)
+
+cutlist3<-c(100,175,210,237,237,316)
+Fem_Age_cut3_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist3,abso = TRUE,corr="none",nbit = 100,gam=0.25) 
+
+# Age cutlist
+Fem_Age_cut1_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.25) 
+Fem_Age_cut2_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.25)
 
 
+Fem_Age_cut1_gam25_true_none_100_toutemesure<-CompNet(data=Measure_Fem_age,critere="Age",cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.25) #!!!!!!!!!! ici diffff global strength
+Fem_Age_cut2_gam25_true_none_100_toutemesure<-CompNet(data=Measure_Fem_age,critere="Age",cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.25)
 
+Fem_Pub_cut1_gam25_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Pub_cut2_gam25_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.25)
 
+Fem_Age_cut1_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_cut2_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.50)
 
+Fem_Pub_cut1_gam50_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Pub_cut2_gam50_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.50)
 
+load("../R_Env_Quest/Fem_Age_cut1_gam25_true_none_100_RESULTSBIEN.RData")
 
 save.image("../R_Env_Quest/NetworkAnalyseTOUT.RData")
 
