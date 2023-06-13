@@ -32,6 +32,13 @@ library("IsingFit")
 library("NetworkComparisonTest" )
 
 
+
+#load("../R_Env_Quest/NetworkAnalyseTOUT.RData")
+
+#save.image("../R_Env_Quest/NetworkAnalyseTOUT.RData")
+
+
+
 conflict_prefer("alpha", "psych")
 #save.image("../R_Env_Quest/validity.RData")
 
@@ -41,8 +48,14 @@ dataglobal <- read.csv("../Analyses/exporterdansR.csv")
 miss_subscale_bcp<- read.csv("../Analyses/miss_subscale_bcp.csv")
 Measures_bysub<-read.csv("../Analyses/Measures_bysub.csv")
 
+Measures_bysub$A1_sexe<-as.factor(Measures_bysub$A1_sexe)
+Measures_bysub$A2_diff<-as.factor(Measures_bysub$A2_diff)
+
+#Measures_bysub<-subset(Measure_Network, select = - c(Puberty))
 
 
+#combine les niveaux 1 et 2 de la variable economic stattus 
+Measures_bysub$sit_eco[Measures_bysub$sit_eco == 1] <- 2
 
 
 # Missing values by subscale ------------------------------
@@ -52,6 +65,9 @@ Measures_bysub<-read.csv("../Analyses/Measures_bysub.csv")
 vis_dat(Measures_bysub)
 gg_miss_var(Measures_bysub)
 gg_miss_fct(Measures_bysub, A1_sexe) 
+
+
+
 
 MCAR_measure<-mcar_test(Measures_bysub)
 
@@ -67,6 +83,8 @@ imputation <- mice(Measures_bysub, m= n_imputations, method = NULL, , ignore = N
 # Prends les données manquantes imputées et les rajoutes dans le dataframe original 
 Measure_imputed<-complete(imputation)
 
+
+MCAR_measure2<-mcar_test(Measure_imputed)
 
 
 
@@ -409,119 +427,6 @@ alpha(active,check.keys=TRUE) # 0.49 passage à  0.49 avec L1
 
 
 
-###
-##
-# analyse lm --------------------------------
-"""
-library(ggeffects)
-############D_cons_soi
-lm1_age_D1<-lm(D1_priv ~ A3_age_m, data = Measure_Network )
-lm2_age_D1<-lm(D1_priv ~ poly(A3_age_m,2), data = Measure_Network )
-lm3_age_D1<-lm(D1_priv ~ poly(A3_age_m,3), data = Measure_Network )
-lm4_age_D1<-lm(D1_priv ~ log(A3_age_m), data = Measure_Network )
-
-anova(lm1_age_D1,lm2_age_D1,lm3_age_D1,lm4_age_D1)
-
-modtoplot=ggpredict(lm2_age_D1, c('A3_age_m[all]')) 
-plot(modtoplot,rawdata = TRUE)
-
-modtoplot=ggpredict(lm4_age_D1, c('A3_age_m[all]')) 
-plot(modtoplot,rawdata = TRUE)
-
-lm1_pub_D1<-lm(D1_priv ~ B_puberte, data = Measure_Network )
-lm2_pub_D1<-lm(D1_priv ~ poly(B_puberte,2), data = Measure_Network )
-lm3_pub_D1<-lm(D1_priv ~ poly(B_puberte,3), data = Measure_Network )
-lm4_pub_D1<-lm(D1_priv ~ log(B_puberte), data = Measure_Network )
-
-anova(lm1_pub_D1,lm2_pub_D1,lm3_pub_D1,lm4_pub_D1)
-
-modtoplot=ggpredict(lm2_pub_D1, c('B_puberte[all]')) 
-plot(modtoplot,rawdata = TRUE)
-
-
-lm2_age_D1_sexe<-lm(D1_priv ~ poly(A3_age_m,2)*A1_sexe, data = Measure_Network )
-anova(lm2_age_D1,lm2_age_D1_sexe)
-modtoplot=ggpredict(lm2_age_D1_sexe, c('A3_age_m[all]','A1_sexe')) 
-plot(modtoplot,rawdata = TRUE)
-
-
-
-##recherche inflexion age puberté
-
-mod_age<-lm(D1_priv ~ poly(A3_age_m,2,raw=TRUE), data = subset(Measure_Network, A1_sexe == '1') )
-modtoplot=ggpredict(mod_age, c('A3_age_m[all]')) 
-plot(modtoplot,rawdata = TRUE)
-
-sum_age<-summary(mod_age,ddf = 'Kenward-Roger')
-a<-sum_age$coefficients['(Intercept)','Estimate']
-b1<-sum_age$coefficients['poly(A3_age_m, 2, raw = TRUE)1','Estimate']
-b2<-sum_age$coefficients['poly(A3_age_m, 2, raw = TRUE)2','Estimate']
-
-f <- function(x) { a +(b1*x)+(b2*x^2) }
-curve(f(x),xlim = c(100,300))
-
-#calcul de la dérivé
-f_prime <- function(x) { b1 + 2*b2*x }
-curve(f_prime(x), xlim = c(100,300))
-p_inf1_RV2_touch_age<- (uniroot(f_prime, interval = c(150,300))[[1]])/12
-
-
-mod_pub<-lm(D1_priv ~ poly(B_puberte,2,raw=TRUE), data =  subset(Measure_Network, A1_sexe == '1') )
-modtoplot=ggpredict(mod_pub, c('B_puberte[all]')) 
-plot(modtoplot,rawdata = TRUE)
-
-sum_pub<-summary(mod_pub,ddf = 'Kenward-Roger', raw = TRUE)
-a<-sum_pub$coefficients['(Intercept)','Estimate']
-b1<-sum_pub$coefficients['poly(B_puberte, 2, raw = TRUE)1','Estimate']
-b2<-sum_pub$coefficients['poly(B_puberte, 2, raw = TRUE)2','Estimate']
-
-f <- function(x) { a +(b1*x)+(b2*x^2) }
-curve(f(x), xlim = c(1,5))
-
-#calcul de la dérivé
-f_prime <- function(x) { b1 + 2*b2*x }
-curve(f_prime(x), xlim = c(1,5))
-p_inf1_RV2_touch_pub<- uniroot(f_prime, interval = c(4,5))[[1]] 
-
-
-############K6
-lm1_age_K6<-lm(K6_trust ~ A3_age_m*A1_sexe, data = Measure_Network )
-lm2_age_K6<-lm(K6_trust ~ poly(A3_age_m,2)*A1_sexe, data = Measure_Network )
-lm3_age_K6<-lm(K6_trust ~ poly(A3_age_m,3)*A1_sexe, data = Measure_Network )
-lm4_age_K6<-lm(K6_trust ~ log(A3_age_m)*A1_sexe, data = Measure_Network )
-
-anova(lm1_age_K6,lm2_age_K6,lm3_age_K6,lm4_age_K6)
-
-
-
-modtoplot=ggpredict(lm2_age_K6, c('A3_age_m[all]', 'A1_sexe')) 
-plot(modtoplot,rawdata = TRUE)
-
-modtoplot=ggpredict(lm3_age_K6, c('A3_age_m[all]', 'A1_sexe')) 
-plot(modtoplot,rawdata = TRUE)
-
-modtoplot=ggpredict(lm4_age_K6, c('A3_age_m[all]')) 
-plot(modtoplot,rawdata = TRUE)
-
-lm1_pub_K6<-lm(K6_trust ~ B_puberte, data = Measure_Network )
-lm2_pub_K6<-lm(K6_trust ~ poly(B_puberte,2), data = Measure_Network )
-lm3_pub_K6<-lm(K6_trust ~ poly(B_puberte,3), data = Measure_Network )
-lm4_pub_K6<-lm(K6_trust ~ log(B_puberte), data = Measure_Network )
-
-anova(lm1_pub_K6,lm2_pub_K6,lm3_pub_K6,lm4_pub_K6)
-anova(lm3_pub_K6)
-
-modtoplot=ggpredict(lm3_pub_K6, c('B_puberte[all]')) 
-plot(modtoplot,rawdata = TRUE)
-
-
-lm2_age_K6_sexe<-lm(K6_trust ~ poly(A3_age_m,2)*A1_sexe, data = Measure_Network )
-anova(lm2_age_K6,lm2_age_K6_sexe)
-modtoplot=ggpredict(lm2_age_K6_sexe, c('A3_age_m[all]','A1_sexe')) 
-plot(modtoplot,rawdata = TRUE)
-
-"""
-
 
 
 # Topological overlap analysis ---------------------------------
@@ -529,37 +434,29 @@ plot(modtoplot,rawdata = TRUE)
 ##### on data imputed for missing values
 
 
-gb_dataset<-goldbricker(
-  Measure_imputed,
-  p = 0.05,
-  method = "hittner2003",
-  threshold = 0.30,
-  corMin = 0.5,
-  progressbar = TRUE)
 
-Measure_Network0 <- net_reduce(data=Measure_imputed, badpairs=gb_dataset,method=c("best_goldbricker"))
+Measure_Network<-Measure_imputed
 
-gb_red_nodes1<-goldbricker(
-  Measure_Network0,
-  p = 0.05,
-  method = "hittner2003",
-  threshold = 0.30,
-  corMin = 0.5,
-  progressbar = TRUE)
+gb_dataset_all <- list('','')
+gb_dataset_all['suggested_reductions'] <- list('')
 
 
-if (gb_red_nodes1$suggested_reductions == "No suggested reductions") {
-  Measure_Network <- Measure_Network0
-} else {
-  Measure_Network <- net_reduce(data = Measure_Network0, badpairs = gb_red_nodes1, method = c("best_goldbricker"))
-  
-  gb_red_nodes2<-goldbricker(
+while (gb_dataset_all$suggested_reductions[1] != "No suggested reductions") {
+  gb_dataset_all <- goldbricker(
     Measure_Network,
     p = 0.05,
     method = "hittner2003",
     threshold = 0.30,
     corMin = 0.5,
-    progressbar = TRUE)
+    progressbar = TRUE
+  )
+  # Réduire le réseau avec les nouvelles suggestions de réduction
+  
+  if (gb_dataset_all$suggested_reductions[1] == "No suggested reductions") {
+    break  # Sortir de la boucle
+  }
+  
+  Measure_Network <- net_reduce(data = Measure_Network, badpairs = gb_dataset_all, method = c("best_goldbricker"))
   
 }
 
@@ -672,9 +569,10 @@ extractlabelnet<- function (data)    {
 
  return(result) 
 }
-# WHOLE net Age -------------------
 
-# * Whole Age -------------------
+# WHOLE net  -------------------
+
+# * AGE Whole -------------------
 
 ###SUPPRESSION DES MESURES 
 
@@ -682,43 +580,53 @@ Measure_final_age<-subset(Measure_Network, select = - c(Puberty))
 Measure_final_raw_age<-subset(Measure_Network_raw, select = - c(Puberty))
 
 
-### Make correlation matrix
-Measure_final_age.cor<-cor_auto(Measure_final_age) #compute the correlation Matrix with qgraph Packages 
-Measure_final_raw_age.cor<-cor_auto(Measure_final_raw_age) #compute the correlation Matrix with qgraph Packages 
 
-##### Network analysis
-label_whole_age<-extractlabelnet(Measure_final_age)
 
-png("Figures_Quest/Network_Whole_imputed_age.png", width=2000, height=1400)
-graph_imputed_age<-qgraph(Measure_final_age.cor, graph="glasso", layout="spring",labels=label_whole_age[['labels']],
-                          tuning=0.50, 
-                           vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_age),
-                           border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                           groups=label_whole_age[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
-                                                  "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
-                           legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                           nodeNames=label_whole_age[['nodeNames']])
+
+#** Network GMG non mixed --------------- 
+Measure_final_age.cor<-cor_auto(Measure_final_age) #Automatically compute an apppropriate correlation matrix  qgraph Packages 
+Measure_final_raw_age.cor<-cor_auto(Measure_final_raw_age) #Automatically compute an apppropriate correlation matrix  with qgraph Packages 
+
+
+max(Measure_final_age.cor[upper.tri(Measure_final_age.cor,diag=FALSE)]) # 0.72
+
+
+png("Figures_Quest/Network_Whole_imputed_age_ggm.png", width=2000, height=1400)
+graph_imputed_age_ggm<-qgraph(Measure_final_age.cor, graph="glasso", layout=Layeoutimputed,labels=label_whole_age[['labels']],
+                              tuning=0.50, 
+                              maximum=.75,minimum=.0,
+                              vsize=7, cut=0,  sampleSize = nrow(Measure_final_age),
+                              border.width=0.1, border.color="#a8a8a8",  
+                              groups=label_whole_age[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                                                                          "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
+                              legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
+                              nodeNames=label_whole_age[['nodeNames']])
 dev.off()
 
-Layeoutimputed<-averageLayout(graph_imputed_age)
+Layeoutimputed<-averageLayout(graph_imputed_age_ggm)
 
-png("Figures_Quest/Network_Whole_raw_age.png", width=2000, height=1400)
-graph_raw_age<-qgraph(Measure_final_raw_age.cor, graph="glasso", layout=Layeoutimputed,labels=label_whole_age[['labels']],
-                      tuning=0.50,  
-                      vsize=7, cut=0, maximum=.45, sampleSize = nrow(Measure_final_age),
-                       border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                       groups=label_whole_age[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
-                                              "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
-                       legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                       nodeNames=label_whole_age[['nodeNames']])
+
+
+png("Figures_Quest/Centrality_Whole_imputed_age_ggm.png", width=2000, height=1400)
+centrality_imputed<-centralityPlot(graph_imputed_age_ggm,include="All",orderBy = "Betweenness")
 dev.off()
 
 
-### Centrality analysis
 
-png("Figures_Quest/Centrality_Whole_imputed_age.png", width=2000, height=1400)
-centrality_imputed<-centralityPlot(graph_imputed_age,include="All",orderBy = "Betweenness")
+png("Figures_Quest/Network_Whole_raw_ggm_age.png", width=2000, height=1400)
+graph_raw_age_ggm<-qgraph(Measure_final_raw_age.cor, graph="glasso", layout=Layeoutimputed,labels=label_whole_age[['labels']],  ## graph="glasso" Will run EBICglasso to obtain an optimal sparse estimate of the partial correlation matrix using the glasso package 
+                          tuning=0.50,  maximum=.75,minimum=.0, 
+                          vsize=7, cut=0,  sampleSize = nrow(Measure_final_age),
+                          border.width=0.1, border.color="#a8a8a8",  
+                          groups=label_whole_age[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                                                                      "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
+                          legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
+                          nodeNames=label_whole_age[['nodeNames']])
 dev.off()
+
+
+
+
 
 png("Figures_Quest/Centrality_Whole_raw_age.png", width=2000, height=1400)
 centrality_raw<-centralityPlot(graph_raw_age,include="All",orderBy = "Betweenness")
@@ -726,7 +634,280 @@ dev.off()
 
 
 
-# * Whole Pub -------------------
+### **** imputed and raw data : check the correlation between the 2 matrix ------------------------------
+mat_imputed_whole_ggm<- getWmat(Measure_final_age.cor) 
+cor_imputed_whole_ggm<-mat_imputed_whole_ggm[upper.tri(mat_imputed_whole_ggm,diag=FALSE)]; 
+
+
+mat_raw_whole_ggm<- getWmat(Measure_final_raw_age.cor)
+cor_raw_whole_ggm<-mat_raw_whole_ggm[upper.tri(mat_raw_whole_ggm,diag=FALSE)]; 
+
+
+cor_pears_imput_raw <- cor(cor_imputed_whole_ggm,cor_raw_whole_ggm,  method = "pearson"); # 0.9987925
+cor_spear_imput_raw <- cor(cor_imputed_whole_ggm,cor_raw_whole_ggm,  method = "spearman"); # 0.9983824
+
+
+
+# *** Robustness and Stability for centrality analyses imputed --------------------------------
+
+# A : a priori sample size analysis
+
+#recreate network with estimateNetwork function from package bootnet 
+net_imputed_age <- estimateNetwork(Measure_final_age,   default = "EBICglasso",   corMethod = "cor_auto",   tuning = 0.5,   refit = TRUE)
+
+
+#sample size analysis
+simRes <- netSimulator(net_imputed_age$graph,
+                       dataGenerator = ggmGenerator(
+                         ordinal = TRUE, nLevels = 5),
+                       default = "EBICglasso",
+                       nCases = c(100,300,600,1000),
+                       tuning = 0.5,
+                       nReps =100  )
+
+"plot"
+plot(simRes)
+plot(simRes, yvar = c("strength","betweenness"))
+
+
+
+
+# B  : post-hoc 
+#a: edge weight accuracy
+set.seed(3)
+Wholageimputed_accuracy <- bootnet(Measure_final_age, default = "EBICglasso", type = "nonparametric", nCores = 8, nBoots = 2000, statistics = c("edge", "strength","expectedInfluence","betweenness"))
+plot(Wholageimputed_accuracy$sample, layout = Layeoutimputed, fade = FALSE)
+plot(Wholageimputed_accuracy, labels = TRUE, order = "sample")
+plot(Wholageimputed_accuracy, labels = FALSE, order = "sample")
+
+#b: network centrality coefficient stability
+set.seed(4)
+Wholageimputed_stability <- bootnet(Measure_final_age, default = "EBICglasso", type = "case", nCores = 8, caseN = 25, nBoots =2000, statistics = c("strength","expectedInfluence","betweenness"))
+plot(Wholageimputed_stability$sample, layout = Layeoutimputed, fade = FALSE)
+plot(Wholageimputed_stability, statistics = c("strength", "expectedInfluence","betweenness"))
+
+#c: stability (CS) coefficient
+corStability(Wholageimputed_stability, statistics = c("strength", "expectedInfluence","betweenness"), cor = 0.7)
+
+#f: difference tests of edge weights for all pairs of 
+#pdf(file = "bootnet_edge_difference_CA.pdf")
+plotacc <- plot(Wholageimputed_accuracy, "edge", plot = "difference", onlyNonZero = TRUE, order = "sample"); 
+#dev.off()
+#pdf(file = "bootnet_edge_difference_CA_withoutLabels.pdf")
+plotacc2 <- plot(Wholageimputed_accuracy, "edge", plot = "difference", onlyNonZero = TRUE, order = "sample", labels = FALSE); 
+#dev.off()
+
+#g: difference test for node strength 
+#pdf(file = "bootnet_strength_difference_CA.pdf")
+plotstrength <- plot(Wholageimputed_accuracy, "strength"); 
+#dev.off()
+#pdf(file = "bootnet_expectedInfluence_difference_CA.pdf")
+plotexpectedInfluence <- plot(Wholageimputed_accuracy, "expectedInfluence"); 
+#dev.off()
+plotexpectedInfluence <- plot(Wholageimputed_accuracy,"betweenness"); 
+
+
+
+# *** Robustness and Stability for centrality analyses raw data --------------------------------
+
+# A : a priori sample size analysis
+
+#recreate network with estimateNetwork function from package bootnet 
+net_raw_age <- (Measure_final_raw_age,   default = "EBICglasso",   corMethod = "cor_auto",   tuning = 0.5,   refit = TRUE )
+
+
+#sample size analysis
+simRes_raw <- netSimulator(net_raw_age$graph,
+                       dataGenerator = ggmGenerator(
+                         ordinal = TRUE, nLevels = 5),
+                       default = "EBICglasso",
+                       nCases = c(100,300,600,1000),
+                       tuning = 0.5,
+                       nReps = 100  )
+
+# plot 
+plot(simRes_raw)
+plot(simRes_raw, yvar = c("strength","expectedInfluence","betweenness"))
+
+
+
+
+# B  : post-hoc 
+#a: edge weight accuracy
+set.seed(3)
+Wholageraw_accuracy <- bootnet(Measure_final_raw_age, default = "EBICglasso", type = "nonparametric", nCores = 8, nBoots = 2000, statistics = c("edge", "strength","expectedInfluence","betweenness"))
+plot(Wholageraw_accuracy$sample, layout = Layeoutimputed, fade = FALSE)
+plot(Wholageraw_accuracy, labels = TRUE, order = "sample")
+plot(Wholageraw_accuracy, labels = FALSE, order = "sample")
+
+#b: network centrality coefficient stability
+set.seed(4)
+Wholageraw_stability <- bootnet(Measure_final_age, default = "EBICglasso", type = "case", nCores = 8, caseN = 25, nBoots =2000, statistics = c("strength","expectedInfluence","betweenness"))
+plot(Wholageraw_stability$sample, layout = PP_Layout, fade = FALSE)
+plot(Wholageraw_stability, statistics = c("strength", "expectedInfluence","betweenness"))
+
+#c: stability (CS) coefficient
+corStability(Wholageraw_stability, statistics = c("strength", "expectedInfluence","betweenness"), cor = 0.7)
+
+#f: difference tests of edge weights for all pairs of 
+#pdf(file = "bootnet_edge_difference_CA.pdf")
+plotacc <- plot(Wholageraw_accuracy, "edge", plot = "difference", onlyNonZero = TRUE, order = "sample"); 
+#dev.off()
+#pdf(file = "bootnet_edge_difference_CA_withoutLabels.pdf")
+plotacc2 <- plot(Wholageraw_accuracy, "edge", plot = "difference", onlyNonZero = TRUE, order = "sample", labels = FALSE); 
+#dev.off()
+
+#g: difference test for node strength 
+#pdf(file = "bootnet_strength_difference_CA.pdf")
+plotstrength <- plot(Wholageraw_accuracy, "strength"); 
+#dev.off()
+#pdf(file = "bootnet_expectedInfluence_difference_CA.pdf")
+plotexpectedInfluence <- plot(Wholageraw_accuracy, "expectedInfluence"); 
+#dev.off()
+plotexpectedInfluence <- plot(Wholageraw_accuracy,"betweenness"); 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#** Network MGM pairwise ---------------------------------
+
+
+
+library(mgm) ## for mixed graphical model : mix between ordinal and continuous variable 
+
+#**  Make correlation matrix
+type_final_age<- c("c", "c", "g", "g",
+                   "g", "g", "g", "g",
+                   "g", "g", "g","g",
+                   "g", "g", "g","g",
+                   "g", "g", "g","g",
+                   "g", "g", "g","g",
+                   "g", "g", "g","g",
+                   "p", "g", "g")
+
+cat_final_age <-c(length(unique(Measure_final_age$Sex)),length(unique(Measure_final_age$Cisgender)), 1, 1,
+                  1, 1, 1, 1,
+                  1, 1, 1,1,
+                  1, 1, 1,1,
+                  1, 1, 1,1,
+                  1, 1, 1,1,
+                  1, 1, 1,1,
+                  1, 1, 1)
+
+
+Measure_final_age.mgm <- mgm(Measure_final_age, type=type_final_age,level=cat_final_age, lamda.sel="EBIC",lambdaGam =.50,threshold = "none", k=2, scale = TRUE,
+                             saveModels = TRUE,thresholdCat = TRUE)
+
+
+label_whole_age<-extractlabelnet(Measure_final_age)
+
+png("Figures_Quest/Network_Whole_imputed_age_mgm++.png", width=2000, height=1400)
+
+graph_imputed_age_mgm<- qgraph(Measure_final_age.mgm$pairwise$wadj,  layout=Layeoutimputed,labels=label_whole_age[['labels']],
+                         maximum=75,minimum=.0,
+                         vsize=7, cut=0,  sampleSize = nrow(Measure_final_age),
+                         border.width=0.1, border.color="#a8a8a8",  
+                         groups=label_whole_age[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                                                                     "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
+                         legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
+                         edge.color = Measure_final_age.mgm$pairwise$edgecolor,
+                         nodeNames=label_whole_age[['nodeNames']])
+dev.off()
+
+
+
+png("Figures_Quest/Centrality_Whole_imputed_age_mgm++.png", width=2000, height=1400)
+centrality_imputed_mgm<-centralityPlot(graph_imputed_age_mgm,include="All",orderBy = "Betweenness")
+dev.off()
+
+
+#*** Network MGM Node predictability  -------------------------------
+
+
+pred_mgm <- predict(object = Measure_final_age.mgm,
+                    data =Measure_final_age,
+                    errorCon = c("RMSE", "R2"),
+                    errorCat = c("CC", "nCC"))
+
+errors <- c(pred_mgm$errors[1:2, 5],pred_mgm$errors[3:31, 3])
+
+png("Figures_Quest/Network_Whole_imputed_age_mgm_error.png", width=2000, height=1400)
+
+graph_imputed_age_mgm_error<- qgraph(Measure_final_age.mgm$pairwise$wadj,  layout=Layeoutimputed,labels=label_whole_age[['labels']],
+                               maximum=.50,minimum=.05,
+                               pie = errors,
+                               vsize=7, cut=0,  sampleSize = nrow(Measure_final_age),
+                               border.width=0.1, border.color="#a8a8a8",  
+                               groups=label_whole_age[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                                                                           "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
+                               legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
+                               edge.color = Measure_final_age.mgm$pairwise$edgecolor,
+                               nodeNames=label_whole_age[['nodeNames']])
+dev.off()
+
+
+
+
+
+
+
+
+#** Network MGM order3 ---------------------------------
+
+
+
+Measure_final_age_order3.mgm <- mgm(Measure_final_age, type=type,level=cat, lamda.sel="EBIC",lambdaGam =.50,threshold = "none", k=3, scale = TRUE,
+                                    saveModels = TRUE,thresholdCat = TRUE)
+
+
+Measure_final_age_order3.mgm$interactions$indicator
+Measure_final_age_order3.mgm$interactions$weights
+
+
+
+FactorGraph(object = Measure_final_age_order3.mgm, PairwiseAsEdge = TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# * PUB whole  -------------------
 
 ###SUPPRESSION DES MESURES POUR NETWORK!!!!!!!!!!!!!!
 
@@ -777,6 +958,7 @@ centrality_raw<-centralityPlot(graph_raw,include="All",orderBy = "Betweenness")
 dev.off()
 
 
+### Robustesse 
 
 
 
@@ -830,7 +1012,7 @@ Measure_Network_sex_col<- colnames(Measure_Mal_age_net)
 Measure_Fem_age_net <- Measure_Fem_age[, intersect(Measure_Network_sex_col, colnames(Measure_Fem_age))]
 
 
-# * Sex NCT  --------------
+# * NCT  Sex--------------
 
 
 # *** none gam50 nonabs----------------------------
@@ -856,6 +1038,9 @@ NCTFemvsMal_nocorr_50_nonabs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
                                #estimatorArgs = list(), 
                                verbose = TRUE)
 
+png("Figures_Quest/NCTFemvsMal_nocorr_50_nonabs.png", width=2000, height=1400)
+plot(NCTFemvsMal_nocorr_50_nonabs)
+dev.off()
 
 ### test diff global strength.
 p_diffstrenght_nocorr_50_nonabs <- NCTFemvsMal_nocorr_50_nonabs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
@@ -879,7 +1064,109 @@ diffbetwee_signi_nocorr_50_nonabs_p<-rownames(p_allcent_nocorr_50_nonabs%>% dply
 diffstren_cent_signi_nocorr_50_nonabs_p<-rownames(p_allcent_nocorr_50_nonabs%>% dplyr::filter(strength < 0.050))
 
 diffbetwee_signi_nocorr_50_nonabs <- subset(NCTFemvsMal_nocorr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_nocorr_50_nonabs$diffcen.real) %in% diffbetwee_signi_nocorr_50_nonabs_p)
-diffstren_cent_signi_nocorr_50_nonabs <- subset(NCTFemvsMal_nocorr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_nocorr_50_nonabs$diffcen.real) %in% diffstren_cent_signi_fdr_50_nonabs_p)
+diffstren_cent_signi_nocorr_50_nonabs <- subset(NCTFemvsMal_nocorr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_nocorr_50_nonabs$diffcen.real) %in% diffstren_cent_signi_nocorr_50_nonabs_p)
+
+
+
+
+# *** FDR gam50 nonabs----------------------------
+
+NCTFemvsMal_fdr_50_nonabs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
+                               gamma=0.50,
+                               it = 10000, # The number of iterations (permutations).
+                               binary.data=FALSE, 
+                               paired=FALSE, 
+                               weighted=TRUE, 
+                               abs=FALSE,
+                               test.edges=TRUE, 
+                               edges="all", 
+                               progressbar=TRUE, 
+                               make.positive.definite=TRUE,
+                               p.adjust.methods= c("fdr"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                               test.centrality=TRUE, 
+                               centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                               nodes="all",
+                               communities=gr_sexe,
+                               useCommunities="all",
+                               #estimator,
+                               #estimatorArgs = list(), 
+                               verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+###test & trouver diff all edge weights.
+p_alledgeweight_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_fdr_50_nonabs <- as.data.frame(p_alledgeweight_fdr_50_nonabs)
+names(p_alledgeweight_fdr_50_nonabs)[3]<- 'pval'
+edgeweight_signi_fdr_50_nonabs <- p_alledgeweight_fdr_50_nonabs %>% dplyr::filter(pval < 0.050) ##############"!!!!!!!!!!!!
+
+which(names(Measure_Fem_age_net)=='Body_Objectification')
+NCTFemvsMal_fdr_50_nonabs$einv.real[11,23]
+
+###trouver diffférence de centralité
+p_allcent_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_fdr_50_nonabs<- as.data.frame(p_allcent_fdr_50_nonabs)
+diffbetwee_signi_fdr_50_nonabs_p<-rownames(p_allcent_fdr_50_nonabs%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_fdr_50_nonabs_p<-rownames(p_allcent_fdr_50_nonabs%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_fdr_50_nonabs <- subset(NCTFemvsMal_fdr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_fdr_50_nonabs$diffcen.real) %in% diffbetwee_signi_fdr_50_nonabs_p)
+diffstren_cent_signi_fdr_50_nonabs <- subset(NCTFemvsMal_fdr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_fdr_50_nonabs$diffcen.real) %in% diffstren_cent_signi_fdr_50_nonabs_p)
+
+
+# *** BH gam50 nonabs----------------------------
+
+NCTFemvsMal_bh_50_nonabs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
+                               gamma=0.50,
+                               it = 10000, # The number of iterations (permutations).
+                               binary.data=FALSE, 
+                               paired=FALSE, 
+                               weighted=TRUE, 
+                               abs=FALSE,
+                               test.edges=TRUE, 
+                               edges="all", 
+                               progressbar=TRUE, 
+                               make.positive.definite=TRUE,
+                               p.adjust.methods= c("BH"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
+                               test.centrality=TRUE, 
+                               centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
+                               nodes="all",
+                               communities=gr_sexe,
+                               useCommunities="all",
+                               #estimator,
+                               #estimatorArgs = list(), 
+                               verbose = TRUE)
+
+
+### test diff global strength.
+p_diffstrenght_bh_50_nonabs <- NCTFemvsMal_bh_50_nonabs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
+
+###test diff maximum difference in edge weights.
+p_globaledgeweight_bh_50_nonabs <- NCTFemvsMal_bh_50_nonabs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
+
+###test & trouver diff all edge weights.
+p_alledgeweight_bh_50_nonabs <- NCTFemvsMal_bh_50_nonabs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+p_alledgeweight_bh_50_nonabs <- as.data.frame(p_alledgeweight_bh_50_nonabs)
+names(p_alledgeweight_bh_50_nonabs)[3]<- 'pval'
+edgeweight_signi_bh_50_nonabs <- p_alledgeweight_bh_50_nonabs %>% dplyr::filter(pval < 0.050) ##############"!!!!!!!!!!!!
+
+which(names(Measure_Fem_age_net)=='Body_Objectification')
+NCTFemvsMal_bh_50_nonabs$einv.real[11,23]
+
+###trouver diffférence de centralité
+p_allcent_bh_50_nonabs <- NCTFemvsMal_bh_50_nonabs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
+p_allcent_bh_50_nonabs<- as.data.frame(p_allcent_bh_50_nonabs)
+diffbetwee_signi_bh_50_nonabs_p<-rownames(p_allcent_bh_50_nonabs%>% dplyr::filter(betweenness  < 0.050 ))
+diffstren_cent_signi_bh_50_nonabs_p<-rownames(p_allcent_bh_50_nonabs%>% dplyr::filter(strength < 0.050))
+
+diffbetwee_signi_bh_50_nonabs <- subset(NCTFemvsMal_bh_50_nonabs$diffcen.real, row.names(NCTFemvsMal_bh_50_nonabs$diffcen.real) %in% diffbetwee_signi_bh_50_nonabs_p)
+diffstren_cent_signi_bh_50_nonabs <- subset(NCTFemvsMal_bh_50_nonabs$diffcen.real, row.names(NCTFemvsMal_bh_50_nonabs$diffcen.real) %in% diffstren_cent_signi_bh_50_nonabs_p)
+
+
 
 
 
@@ -928,57 +1215,8 @@ diffbetwee_signi_nocorr_25_nonabs_p<-rownames(p_allcent_nocorr_25_nonabs%>% dply
 diffstren_cent_signi_nocorr_25_nonabs_p<-rownames(p_allcent_nocorr_25_nonabs%>% dplyr::filter(strength < 0.050))
 
 diffbetwee_signi_nocorr_25_nonabs <- subset(NCTFemvsMal_nocorr_25_nonabs$diffcen.real, row.names(NCTFemvsMal_nocorr_25_nonabs$diffcen.real) %in% diffbetwee_signi_nocorr_25_nonabs_p)
-diffstren_cent_signi_nocorr_25_nonabs <- subset(NCTFemvsMal_nocorr_25_nonabs$diffcen.real, row.names(NCTFemvsMal_nocorr_25_nonabs$diffcen.real) %in% diffstren_cent_signi_fdr_25_nonabs_p)
+diffstren_cent_signi_nocorr_25_nonabs <- subset(NCTFemvsMal_nocorr_25_nonabs$diffcen.real, row.names(NCTFemvsMal_nocorr_25_nonabs$diffcen.real) %in% diffstren_cent_signi_bh_25_nonabs_p)
 
-
-
-# *** FDR gam50 nonabs----------------------------
-
-NCTFemvsMal_fdr_50_nonabs<-NCT(Measure_Fem_age_net, Measure_Mal_age_net,
-                               gamma=0.50,
-                               it = 10000, # The number of iterations (permutations).
-                               binary.data=FALSE, 
-                               paired=FALSE, 
-                               weighted=TRUE, 
-                               abs=FALSE,
-                               test.edges=TRUE, 
-                               edges="all", 
-                               progressbar=TRUE, 
-                               make.positive.definite=TRUE,
-                               p.adjust.methods= c("BH"), #,"holm","hochberg","hommel", "bonferroni","BH","BY","fdr"), 
-                               test.centrality=TRUE, 
-                               centrality=c("betweenness","strength"), #'betweenness', 'strength', 'expectedInfluence', 'bridgeStrength', 'bridgeCloseness', 'bridgeBetweenness', 'bridgeExpectedInfluence'
-                               nodes="all",
-                               communities=gr_sexe,
-                               useCommunities="all",
-                               #estimator,
-                               #estimatorArgs = list(), 
-                               verbose = TRUE)
-
-
-### test diff global strength.
-p_diffstrenght_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$glstrinv.pval # 	 The p value resulting from the permutation test concerning difference in global strength.
-
-###test diff maximum difference in edge weights.
-p_globaledgeweight_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$nwinv.pval  # The p value resulting from the permutation test concerning the maximum difference in edge weights.
-
-###test & trouver diff all edge weights.
-p_alledgeweight_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
-p_alledgeweight_fdr_50_nonabs <- as.data.frame(p_alledgeweight_fdr_50_nonabs)
-names(p_alledgeweight_fdr_50_nonabs)[3]<- 'pval'
-edgeweight_signi_fdr_50_nonabs <- p_alledgeweight_fdr_50_nonabs %>% dplyr::filter(pval < 0.050) ##############"!!!!!!!!!!!!
-
-which(names(Measure_Fem_age_net)=='Body_Objectification')
-NCTFemvsMal_fdr_50_nonabs$einv.real[11,23]
-
-###trouver diffférence de centralité
-p_allcent_fdr_50_nonabs <- NCTFemvsMal_fdr_50_nonabs$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
-p_allcent_fdr_50_nonabs<- as.data.frame(p_allcent_fdr_50_nonabs)
-diffbetwee_signi_fdr_50_nonabs_p<-rownames(p_allcent_fdr_50_nonabs%>% dplyr::filter(betweenness  < 0.050 ))
-diffstren_cent_signi_fdr_50_nonabs_p<-rownames(p_allcent_fdr_50_nonabs%>% dplyr::filter(strength < 0.050))
-
-diffbetwee_signi_fdr_50_nonabs <- subset(NCTFemvsMal_fdr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_fdr_50_nonabs$diffcen.real) %in% diffbetwee_signi_fdr_50_nonabs_p)
-diffstren_cent_signi_fdr_50_nonabs <- subset(NCTFemvsMal_fdr_50_nonabs$diffcen.real, row.names(NCTFemvsMal_fdr_50_nonabs$diffcen.real) %in% diffstren_cent_signi_fdr_50_nonabs_p)
 
 
 
@@ -1251,55 +1489,40 @@ diffstren_cent_signi_fdr_50_abs <- subset(NCTFemvsMal_fdr_50_abs$diffcen.real, r
 
 
 ###label sex
-nodenames_sex<-names(Measure_Fem_age_net)
-labels_sex<- list()
 
-for (col in nodenames_sex) {
-  index <- which(names_list_pairs == col)[1]
-  index_new<-(index+1)
-  new_name<-names_list_pairs[index_new][1]
-  labels_sex<-append(labels_sex, new_name[1])
-}
-
-names_groups_sex<- list()
-for (col in nodenames_sex) {
-  index <- which(names_list_pairs == col)[1]
-  index_new<-(index+2)
-  new_name<-names_list_pairs[index_new][1]
-  names_groups_sex<-append(names_groups_sex, new_name[1])
-}
-
-names_groups_unique<-unique(names_groups_sex)
-gr_sexe <- split(x = 1:length(names_groups_sex), f = unlist(names_groups_sex))
-
+label_whole_age<-extractlabelnet(Measure_Fem_age_net)
 
 Measure_Fem_age_net.cor<-cor_auto(Measure_Fem_age_net) #compute the correlation Matrix with qgraph Packages 
 Measure_Mal_age_net.cor<-cor_auto(Measure_Mal_age_net) #compute the correlation Matrix with qgraph Packages 
 
+max_fem<-max(Measure_Fem_age_net.cor[upper.tri(Measure_Fem_age_net.cor,diag=FALSE)]) # 0.6357468
+max_hom<-max(Measure_Mal_age_net.cor[upper.tri(Measure_Mal_age_net.cor,diag=FALSE)]) # 0.5863839
+
+
 png("Figures_Quest/Network_fem.png", width=2000, height=1400)
-graphFem<-qgraph(Measure_Fem_age_net.cor, graph="glasso", layout="spring",labels=labels_sex,
-                 tuning=0.250,
-                  maximum=.25,minimum=.0,
+graphFem<-qgraph(Measure_Fem_age_net.cor, graph="glasso", layout="spring",labels=label_whole_age[['labels']],
+                 tuning=0.50,
+                  maximum=.75,minimum=.0,
                   vsize=7, cut=0,  sampleSize = nrow(Measure_Fem_age_net),
                   border.width=0.1, border.color="#a8a8a8",  
-                  groups=gr_sexe, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                  groups=label_whole_age[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                            "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),
                   legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                  nodeNames=nodenames_sex)
+                  nodeNames=label_whole_age[['nodeNames']])
 dev.off()
 
 layout_fem<-averageLayout(graphFem)
 
 png("Figures_Quest/Network_mal.png", width=2000, height=1400)
-graphMal<-qgraph(Measure_Mal_age_net.cor, graph="glasso", layout=layout_fem,labels=labels_sex,
-                 tuning=0.250,
-                  maximum=.25,minimum=.0,
+graphMal<-qgraph(Measure_Mal_age_net.cor, graph="glasso", layout=layout_fem,labels=label_whole_age[['labels']],
+                 tuning=0.50,
+                  maximum=.75,minimum=.0,
                   vsize=7, cut=0,sampleSize = nrow(Measure_Mal_age_net),
                   border.width=0.1, border.color="#a8a8a8", 
-                  groups=gr_sexe, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
+                  groups=label_whole_age[['groups']], color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
                                            "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),
                   legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                  nodeNames=nodenames_sex)
+                  nodeNames=label_whole_age[['nodeNames']])
 dev.off()
 
 
@@ -1307,6 +1530,161 @@ sum(graphMal$Edgelist$weight)  ## 2.167981
 sum(graphFem$Edgelist$weight)  ## 3.417337
 
 
+### **** mal and femal : check the correlation between the 2 matrix ------------------------------
+mat_fem_ggm<- getWmat(Measure_Fem_age_net.cor) 
+cor_fem_ggm<-mat_fem_ggm[upper.tri(mat_fem_ggm,diag=FALSE)]; 
+
+
+mat_mal_ggm<- getWmat(Measure_Mal_age_net.cor)
+cor_mal_ggm<-mat_mal_ggm[upper.tri(mat_mal_ggm,diag=FALSE)]; 
+
+
+cor_pears_mal_fem <- cor(cor_fem_ggm,cor_mal_ggm,  method = "pearson"); # 0.8745354
+cor_spear_mal_fem <- cor(cor_fem_ggm,cor_mal_ggm,  method = "spearman"); # 0.8439564
+
+
+
+
+# * psychonetrics (Epskamp et al., 2021)Multigroup network modeling Sex   -------------------------------------------------
+library(psychonetrics)
+
+#First, one estimates a model in each separate dataset and removes non-significant partial correlations. S
+
+graphFem2<-ggm(Measure_Fem_age_net, estimator = "FIML") %>% 
+  runmodel %>% 
+  prune %>% 
+  modelsearch
+
+
+graphMal2<-ggm(Measure_Mal_age_net, estimator = "FIML") %>% 
+  runmodel %>% 
+  prune %>% 
+  modelsearch
+
+
+
+
+compare(graphFem2,graphMal2)
+
+
+
+
+
+econd, a pooled model is estimated in which
+each parameter is included that was included in at least one
+of the individual models from the first step. Third, equality
+constraints are freed in a step-wise fashion until the BIC of
+the overall model does not improve any further. The model
+at the end of this procedure is selected as the final model and
+specifies the estimated group differences. This method is
+available in the R-package psychonetrics (Epskamp, 2020).
+
+
+
+
+# * Williams et al. (2019) proposed two Bayesian methods -----------------------------------------
+to test for differences in parameters across groups. The
+first method uses a Bayes factor to compare the hypothesis
+that a given partial correlation is the same in all groups
+vs. not. The second method computes the posterior of the
+difference between partial correlations in two groups, and
+uses a threshold α on the posterior to decide whether the
+difference is reliably different from zero. Both methods are
+implemented in the R-package BGGM (Williams & Mulder,
+                                   2019).Recently these methods have been extended to data
+consisting of continuous, ordinal, and binary variables using
+a semi-parametric copula model.
+
+
+
+
+
+
+
+# *  MGM moderated network models in  (Halsbecq) -------------------------------------------
+
+head(Measure_final_age_MGM_sex)
+Measure_final_age_MGM_sex<-subset(Measure_final_age, select = - c(Cisgender))
+
+
+type_final_age_MGM_sex<- c("c", "g", "g",
+                  "g", "g", "g", "g",
+                  "g", "g", "g","g",
+                  "g", "g", "g","g",
+                  "g", "g", "g","g",
+                  "g", "g", "g","g",
+                  "g", "g", "g","g",
+                  "p", "g", "g")
+
+cat_final_age_MGM_sex <-c(length(unique(Measure_final_age$Sex)), 1, 1,
+                  1, 1, 1, 1,
+                  1, 1, 1,1,
+                  1, 1, 1,1,
+                  1, 1, 1,1,
+                  1, 1, 1,1,
+                  1, 1, 1,1,
+                  1, 1, 1)
+
+
+mgm_obj <- mgm(data = Measure_final_age_MGM_sex,
+               type=type_final_age_MGM_sex,level=cat_final_age_MGM_sex,
+               moderators = c(1),
+               lambdaSel = "EBIC",
+               lambdaGam = 0.50,
+               ruleReg = "AND")
+
+
+
+l_mgm_cond <- list()
+for(g in 1:2) l_mgm_cond[[g]] <- condition(mgm_obj, values = list("1" = g))
+
+l_mgm_cond[[1]] <- condition(mgm_obj, values = list("1" = 1))
+l_mgm_cond[[2]] <- condition(mgm_obj, values = list("1" = 2))
+
+if (identical(l_mgm_cond[[1]]$pairwise$wadj, l_mgm_cond[[2]]$pairwise$wadj)) {
+  # Les objets sont identiques
+  print("Les objets sont identiques.")
+} else {
+  # Les objets sont différents
+  print("Les objets sont différents.")
+}
+
+
+v_max <- rep(NA, 2)
+for(g in 1:2) v_max[g] <- max(l_mgm_cond[[g]]$pairwise$wadj)
+
+png("Figures_Quest/MGM_sexcomaprisonFem.png")
+graphFem3<- qgraph(input=l_mgm_cond[[1]]$pairwise$wadj,
+         edge.color = l_mgm_cond[[1]] $pairwise$edgecolor,
+         layout = "spring",
+         maximum = max(v_max),edge.labels = TRUE ) 
+dev.off()
+
+LayeoutFem3<-averageLayout(graphFem3)
+       
+png("Figures_Quest/MGM_sexcomaprisonMal.png")
+graphMal3<- qgraph(input=l_mgm_cond[[2]]$pairwise$wadj,
+                  edge.color = l_mgm_cond[[2]]
+                  $pairwise$edgecolor,
+                  layout = LayeoutFem3, 
+                  maximum = max(v_max), 
+                  edge.labels = TRUE) 
+dev.off()
+
+
+
+
+png("Figures_Quest/MGM_sexcomaprison.png")
+par(mfrow=c(1, 2))
+for(g in 1:2) {
+  qgaprhMGMcomp<-qgraph(input=l_mgm_cond[[g]]$pairwise$wadj,
+                     edge.color = l_mgm_cond[[g]]
+                     $pairwise$edgecolor,
+                     layout = LayeoutFem3,
+                     maximum = max(v_max), 
+                     edge.labels = TRUE) 
+mtext(text= paste0("Group ", g), line= 2.5)}
+dev.off()
 
 
 
@@ -1317,16 +1695,7 @@ sum(graphFem$Edgelist$weight)  ## 3.417337
 
 
 
-
-
-
-
-
-
-
-
-
-# création fonction comparaison --------------------
+# création fonction comparaison NCT  --------------------
 
 
 CompNet<- function (data, critere,methode , nbsep='default' ,cutlist='default', gam=0.25,abso,corr,nbit=100)
@@ -1341,10 +1710,11 @@ CompNet<- function (data, critere,methode , nbsep='default' ,cutlist='default', 
   
   Subset <- list() 
   Subset[[1]]<- subset(data[data[[critere]] <= cut_points[[2]],],select = -which(names(data) == critere)) 
-  
+  print(nrow(Subset[[1]]))
   
   for (i in 2:nbsep){
     Subset[[i]] <- subset(data[data[[critere]] > cut_points[[i]] & data[[critere]] <= cut_points[[i+1]], ],select = -which(names(data) == critere))    
+    print(nrow(Subset[[i]]))
   }
   
   pairs <-combn(1:nbsep, 2)
@@ -1390,6 +1760,16 @@ CompNet<- function (data, critere,methode , nbsep='default' ,cutlist='default', 
     NCT_list$pval_invariance[[k]]<-NCTpair$nwinv.pval
     NCT_list$pval_globalstenght[[k]]<-NCTpair$glstrinv.pval
     
+
+    p_alledge<- NCTpair$einv.pvals # p-values (corrected for multiple testing or not according to 'p.adjust.methods') per edge from the permutation test concerning differences in edges weights
+    p_alledge <- as.data.frame(p_alledge)
+    names(p_alledge)[3]<- 'pval'
+    edgeweight_signi<- p_alledge %>% dplyr::filter(pval < 0.050) ##############"!!!!!!!!!!!!
+    
+    
+    
+    
+    
     p_allcent <- NCTpair$diffcen.pval #	p-values(corrected for multiple testing or not according to 'p.adjust.methods') per node from the permutation test concerning differences in centralities. Only if test.centrality = TRUE.
     p_allcent <- as.data.frame(p_allcent )
     diffbetwee_p<-rownames(p_allcent%>% dplyr::filter(betweenness  < 0.050 ))
@@ -1403,9 +1783,11 @@ CompNet<- function (data, critere,methode , nbsep='default' ,cutlist='default', 
     
     NCT_list[[ paste0(cut_points[nbA+1],"vs",cut_points[nbB+1])]]<-NCTpair
     
+    print(NCTpair$nwinv.pval)
     print(NCTpair$glstrinv.pval)
+    print(edgeweight_signi)
     print(diffbetwee)
-    print(diffstren_p)
+    print(diffstren)
     
   }
   
@@ -1417,11 +1799,272 @@ CompNet<- function (data, critere,methode , nbsep='default' ,cutlist='default', 
 
 
 
+# AGE HF 2 groups  -----------------------
+set.seed(10)
+#proportion 
+#FemetMal_Age_2_gam50_true_none_100<-CompNet(data=Measure_final_age,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+FemetMal_Age_2_gam50_true_fdr_100<-CompNet(data=Measure_final_age,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="fdr",nbit = 100,gam=0.50)
+FemetMal_Age_2_gam50_true_bh_100<-CompNet(data=Measure_final_age,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="BH",nbit = 100,gam=0.50)
+
+
+set.seed(11)
+cutlist1<-c(90,168,350)
+FemetMal_age_cut168_gam50_true_none_100<-CompNet(data=Measure_final_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+FemetMal_age_cut168_gam50_fdr_none_100<-CompNet(data=Measure_final_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="fdr",nbit = 100,gam=0.50) 
+FemetMal_age_cut168_gam50_bh_none_100<-CompNet(data=Measure_final_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="BH",nbit = 100,gam=0.50) 
+
+
+set.seed(4)
+cutlist1<-c(90,180,350)
+FemetMal_age_cut180_gam50_true_none_100<-CompNet(data=Measure_final_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+## diff edge et betweeness           
 
 
 
 
-# PUB comparaison 4 niveau -------------------
+# AGE HF >2 groups --------------
+
+FemetMal_Age_3_gam50_true_none_100<-CompNet(data=Measure_final_age,critere="Age",nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+FemetMal_Age_4_gam50_true_none_100<-CompNet(data=Measure_final_age,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+#########CELUI LA SUPER !!!!!!!!!!!!!!!!!!!!!!!
+
+FemetMal_Age_3_gam50_true_fdr_100<-CompNet(data=Measure_final_age,critere="Age",nbsep=3,methode= "proportion",abso = TRUE,corr="fdr",nbit = 100,gam=0.50)
+
+set.seed(13)
+FemetMal_Age_4_gam50_true_fdr_100<-CompNet(data=Measure_final_age,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="fdr",nbit = 100,gam=0.50)
+
+FemetMal_Age_4_gam50_true_fdr_1000<-CompNet(data=Measure_final_age,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="fdr",nbit = 1000,gam=0.50)
+
+
+
+# AGE Sex séparé 2*2 groups   -----------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cutlist1<-c(1,2.8,4)
+Fem_age_cut2.8_gam40_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3,4)
+Fem_age_cut3.0_gam40_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.2,4)
+Fem_age_cut3.2_gam40_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.4,4)
+Fem_age_cut3.4_gam40_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.6,4)
+Fem_age_cut3.6_gam40_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+
+
+
+
+
+
+
+
+
+###!!!!!!!!!!!!!!!! significatif
+Fem_Age_4_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_4_gam50_false_none_1000<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = FALSE,corr="none",nbit = 1000,gam=0.50)
+Fem_Age_4_gam50_false_fdr_1000<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = FALSE,corr="fdr",nbit = 1000,gam=0.50)
+
+
+
+Fem_Age_cut3_gam50_false_none_1000<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist3,abso = FALSE,corr="none",nbit = 1000,gam=0.50) 
+Fem_Age_cut3_gam50_false_none_1000<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist3,abso = FALSE,corr="fdr",nbit = 1000,gam=0.50) 
+
+
+
+
+
+
+
+Fem_Age_3_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=3,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
+##diffff 
+
+
+Fem_Age_2_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Age_3_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Age_4_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Age_5_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+
+
+
+Fem_Age_2_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=2,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_5_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=5,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
+
+Fem_Pub_2_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Pub_3_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Pub_4_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Pub_5_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
+
+Fem_Age_2_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_3_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_4_gam50_true_none_100<-CompNet(data=Measure_Fem,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_5_gam50_true_none_100<-CompNet(data=Measure_Fem,critere='Age',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+
+Fem_Pub_2_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Pub_3_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Pub_4_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Pub_5_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
+
+
+cutlist1<-c(108,162,204,246,300)
+cutlist2<-c(108,144,168,192,216,240)
+
+cutlist3<-c(100,175,210,237,237,316)
+Fem_Age_cut3_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist3,abso = TRUE,corr="none",nbit = 100,gam=0.25) 
+
+# Age cutlist
+Fem_Age_cut1_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.25) 
+Fem_Age_cut2_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.25)
+
+
+Fem_Age_cut1_gam25_true_none_100_toutemesure<-CompNet(data=Measure_Fem_age,critere="Age",cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.25) #!!!!!!!!!! ici diffff global strength
+Fem_Age_cut2_gam25_true_none_100_toutemesure<-CompNet(data=Measure_Fem_age,critere="Age",cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.25)
+
+Fem_Pub_cut1_gam25_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.25)
+Fem_Pub_cut2_gam25_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.25)
+
+Fem_Age_cut1_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Age_cut2_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.50)
+
+Fem_Pub_cut1_gam50_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.50)
+Fem_Pub_cut2_gam50_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.50)
+
+
+
+
+
+
+
+
+
+
+
+
+
+# AGE Mal 2 niveau   -----------------------
+
+cutlist1<-c(1,2.8,4)
+Mal_age_cut2.8_gam40_true_none_100<-CompNet(data=Measure_Mal_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3,4)
+Mal_age_cut3.0_gam40_true_none_100<-CompNet(data=Measure_Mal_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.2,4)
+Mal_age_cut3.2_gam40_true_none_100<-CompNet(data=Measure_Mal_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.4,4)
+Mal_age_cut3.4_gam40_true_none_100<-CompNet(data=Measure_Mal_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.6,4)
+Mal_age_cut3.6_gam40_true_none_100<-CompNet(data=Measure_Mal_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+
+
+
+
+
+
+
+# PUB 2 niveau HF  -----------------------
+
+Pub1 <- Measure_final_pub[Measure_final_pub$Puberty <= cutlist1[2], ]
+nrow(Pub1)
+Pub2 <- Measure_final_pub[Measure_final_pub$Puberty > cutlist1[2],]
+nrow(Pub2)
+
+cutlist1<-c(1,2.8,4)
+FemetMal_Pub_cut2.8_gam40_true_none_100<-CompNet(data=Measure_final_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+#[1] "Cisgender"
+
+cutlist1<-c(1,3,4)
+FemetMal_Pub_cut3.0_gam40_true_none_100<-CompNet(data=Measure_final_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+# Cisgender                       -28 -0.0205602
+#Body_Esteem_Attribution         -54 -0.3265546
+#Body_Listening                  -47 -0.3162633
+#[1] "Sex"                  "Physical_Activity"    "Social_Anxiety"       "Body_Objectification" "Body_Trusting" 
+
+
+cutlist1<-c(1,3.2,4)
+FemetMal_Pub_cut3.2_gam40_true_none_100<-CompNet(data=Measure_final_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+##Cisgender                        -5 -0.04248587
+#Body_Esteem_Attribution         -29 -0.11396233
+#Body_Listening                  -65 -0.13770557
+#Chronic_Pain                    -22 -0.09708018
+#[1] "Sex"               "Cisgender"         "Physical_Activity" "Body_Trusting" 
+
+
+cutlist1<-c(1,3.4,4)
+FemetMal_Pub_cut3.4_gam40_true_none_100<-CompNet(data=Measure_final_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+##  betweenness   strength
+#Body_Listening         -52 -0.1298416
+#[1] "Body_Objectification" "Body_Trusting" 
+
+cutlist1<-c(1,3.6,4)
+FemetMal_Pub_cut3.6_gam40_true_none_100<-CompNet(data=Measure_final_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+
+# PUB 2 niveau Fem  -----------------------
+
+cutlist1<-c(1,2.8,4)
+Fem_Pub_cut2.8_gam40_true_none_100<-CompNet(data=Measure_Fem_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3,4)
+Fem_Pub_cut3.0_gam40_true_none_100<-CompNet(data=Measure_Fem_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.2,4)
+Fem_Pub_cut3.2_gam40_true_none_100<-CompNet(data=Measure_Fem_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.4,4)
+Fem_Pub_cut3.4_gam40_true_none_100<-CompNet(data=Measure_Fem_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.6,4)
+Fem_Pub_cut3.6_gam40_true_none_100<-CompNet(data=Measure_Fem_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+
+# PUB 2 niveau Mal  -----------------------
+
+cutlist1<-c(1,2.8,4)
+Mal_Pub_cut2.8_gam40_true_none_100<-CompNet(data=Measure_Mal_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3,4)
+Mal_Pub_cut3.0_gam40_true_none_100<-CompNet(data=Measure_Mal_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.2,4)
+Mal_Pub_cut3.2_gam40_true_none_100<-CompNet(data=Measure_Mal_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.4,4)
+Mal_Pub_cut3.4_gam40_true_none_100<-CompNet(data=Measure_Mal_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+cutlist1<-c(1,3.6,4)
+Mal_Pub_cut3.6_gam40_true_none_100<-CompNet(data=Measure_Mal_pub,critere="Puberty",methode= "limite",cutlist = cutlist1,abso = FALSE,corr="none",nbit = 100,gam=0.50) 
+
+
+
+
+
+
+
+
+
+
+# PUB 4 niveau -------------------
 
 Measure_final_pub<-subset(Measure_Network, select = - c(Age))
 
@@ -1806,201 +2449,125 @@ dev.off()
 
 
 
-# FEM & AGE -------------------------
 
 
-# DIFF AGE fem
-
-
-cut_points <- quantile(Measure_Fem_age$Age, probs = seq(0, 1, 0.20))
-
-Fem1 <- Measure_Network[Measure_Network$Age <= cut_points[[2]], ]
-Fem2 <- Measure_Network[Measure_Network$Age > cut_points[[2]] & Measure_Network$Age <= cut_points[[3]],]
-Fem3 <- Measure_Network[Measure_Network$Age > cut_points[[3]] & Measure_Network$Age <= cut_points[[4]],]
-Fem4<- Measure_Network[Measure_Network$Age  > cut_points[[4]]& Measure_Network$Age <= cut_points[[5]],]
-Fem5<- Measure_Network[Measure_Network$Age >= cut_points[[5]],]
-
-
-Fem1<-subset(Fem1, select = - c(Age,Puberty,Cisgender))
-Fem1.cor<-cor_auto(Fem1) #compute the correlation Matrix with qgraph Packages 
-
-Fem2<-subset(Fem2, select = - c(Age,Puberty,Cisgender))
-Fem2.cor<-cor_auto(Fem2) #compute the correlation Matrix with qgraph Packages 
-
-Fem3<-subset(Fem3, select = - c(Age,Puberty,Cisgender))
-Fem3.cor<-cor_auto(Fem3) #compute the correlation Matrix with qgraph Packages 
-
-Fem4<-subset(Fem4, select = - c(Age,Puberty,Cisgender))
-Fem4.cor<-cor_auto(Fem4) #compute the correlation Matrix with qgraph Packages 
-
-Fem5<-subset(Fem5, select = - c(Age,Puberty,Cisgender))
-Fem5.cor<-cor_auto(Fem5) #compute the correlation Matrix with qgraph Packages 
-
-
-nodenamesfemages<-names(Fem1)
-labels_femage<- list()
-for (col in names(Fem1)) {
-  index <- which(names_list_pairs == col)[1]
-  index_new<-(index+1)
-  new_name<-names_list_pairs[index_new][1]
-  labels_femage<-append(labels_femage, new_name[1])
-}
-
-names_groups_tot<- list()
-names_groups_unique<- list()
-
-for (col in names(Fem1)) {
-  index <- which(names_list_pairs == col)[1]
-  index_new<-(index+2)
-  new_name<-names_list_pairs[index_new][1]
-  names_groups_tot<-append(names_groups_tot, new_name[1])
-}
-
-names_groups_unique<-unique(names_groups_tot)
-grfemage <- split(x = 1:length(names_groups_tot), f = unlist(names_groups_tot))
-
-
-png("Figures_Quest/graphFem1.png", width=2000, height=1400)
-graphFem1<-qgraph(Fem1.cor, graph="glasso", layout="spring",labels=labels_femage,
-                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem1),
-                  border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                  groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
-                                         "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
-                  legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                  nodeNames=nodenamesfemages)
-dev.off()
-
-png("Figures_Quest/graphFem2.png", width=2000, height=1400)
-graphFem2<-qgraph(Fem2.cor, graph="glasso", layout="spring",labels=labels_femage,
-                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem2),
-                  border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                  groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
-                                         "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
-                  legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                  nodeNames=nodenamesfemages)
-dev.off()
-
-png("Figures_Quest/graphFem3.png", width=2000, height=1400)
-graphFem3<-qgraph(Fem3.cor, graph="glasso", layout="spring",labels=labels_femage,
-                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem3),
-                  border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                  groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
-                                         "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
-                  legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                  nodeNames=nodenamesfemages)
-dev.off()
-
-png("Figures_Quest/graphFem4.png", width=2000, height=1400)
-graphFem4<-qgraph(Fem4.cor, graph="glasso", layout="spring",labels=labels_femage,
-                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem4),
-                  border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                  groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
-                                         "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
-                  legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                  nodeNames=nodenamesfemages)
-dev.off()
-
-png("Figures_Quest/graphFem5.png", width=2000, height=1400)
-graphFem5<-qgraph(Fem5.cor, graph="glasso", layout="spring",labels=labels_femage,
-                  vsize=7, cut=0, maximum=.45, sampleSize = nrow(Fem5),
-                  border.width=0.1, border.color="#a8a8a8", minimum=.03, 
-                  groups=grfemage, color=c("#377eb8", "#fb9a99", "#4daf4a", "#ffffbf", "#ff7f00", "#ffff33", "#bcf60c", "#c77cff", "#a65628", 
-                                         "#66c2a5", "#fc8d62", "#46f0f0", "#e78ac3"),title= "Whole sample Network",
-                  legend=TRUE,legend.mode='style1',GLratio=2.5,layoutScale=1,legend.cex=0.8,
-                  nodeNames=nodenamesfemages)
-dev.off()
-
-
-
-
-
-# Age NCT --------------
-
-FemetMal_Age_2_gam25_true_none_100<-CompNet(data=Measure_final_age,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-FemetMal_Age_3_gam25_true_none_100<-CompNet(data=Measure_final_age,critere="Age",nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-FemetMal_Age_4_gam25_true_none_100<-CompNet(data=Measure_final_age,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-FemetMal_Age_5_gam25_true_none_100<-CompNet(data=Measure_final_age,critere='Age',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-
-FemetMal_Pub_2_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-FemetMal_Pub_3_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-FemetMal_Pub_4_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-FemetMal_Pub_5_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-
-
-
-# Fem et Age --------------
-
-
-###!!!!!!!!!!!!!!!! significatif
-Fem_Age_4_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
-Fem_Age_4_gam50_false_none_1000<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = FALSE,corr="none",nbit = 1000,gam=0.50)
-Fem_Age_4_gam50_false_fdr_1000<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = FALSE,corr="fdr",nbit = 1000,gam=0.50)
-
-
-
-Fem_Age_cut3_gam50_false_none_1000<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist3,abso = FALSE,corr="none",nbit = 1000,gam=0.50) 
-Fem_Age_cut3_gam50_false_none_1000<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist3,abso = FALSE,corr="fdr",nbit = 1000,gam=0.50) 
-
-
-
-
-
-
-
-Fem_Age_3_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=3,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
-##diffff 
-
-
-Fem_Age_2_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-Fem_Age_3_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-Fem_Age_4_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-Fem_Age_5_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-
-
-
-Fem_Age_2_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere="Age",nbsep=2,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
-Fem_Age_5_gam50_false_none_100<-CompNet(data=Measure_Fem_age,critere='Age',nbsep=5,methode= "proportion",abso = FALSE,corr="none",nbit = 100,gam=0.50)
-
-Fem_Pub_2_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-Fem_Pub_3_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-Fem_Pub_4_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-Fem_Pub_5_gam25_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.25)
-
-Fem_Age_2_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
-Fem_Age_3_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
-Fem_Age_4_gam50_true_none_100<-CompNet(data=Measure_Fem,critere='Age',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
-Fem_Age_5_gam50_true_none_100<-CompNet(data=Measure_Fem,critere='Age',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
-
-Fem_Pub_2_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=2,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
-Fem_Pub_3_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=3,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
-Fem_Pub_4_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=4,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
-Fem_Pub_5_gam50_true_none<-CompNet(data=Measure_final_pub,critere='Puberty',nbsep=5,methode= "proportion",abso = TRUE,corr="none",nbit = 100,gam=0.50)
-
-
-cutlist1<-c(108,162,204,246,300)
-cutlist2<-c(108,144,168,192,216,240)
-
-cutlist3<-c(100,175,210,237,237,316)
-Fem_Age_cut3_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist3,abso = TRUE,corr="none",nbit = 100,gam=0.25) 
-
-# Age cutlist
-Fem_Age_cut1_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.25) 
-Fem_Age_cut2_gam25_true_none_100<-CompNet(data=Measure_Fem_age,critere="Age",methode= "limite",cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.25)
-
-
-Fem_Age_cut1_gam25_true_none_100_toutemesure<-CompNet(data=Measure_Fem_age,critere="Age",cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.25) #!!!!!!!!!! ici diffff global strength
-Fem_Age_cut2_gam25_true_none_100_toutemesure<-CompNet(data=Measure_Fem_age,critere="Age",cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.25)
-
-Fem_Pub_cut1_gam25_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.25)
-Fem_Pub_cut2_gam25_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.25)
-
-Fem_Age_cut1_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.50)
-Fem_Age_cut2_gam50_true_none_100<-CompNet(data=Measure_Fem,critere="Age",cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.50)
-
-Fem_Pub_cut1_gam50_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist1,abso = TRUE,corr="none",nbit = 100,gam=0.50)
-Fem_Pub_cut2_gam50_true_none<-CompNet(data=Measure_Fem,critere='Puberty',cutlist = cutlist2,abso = TRUE,corr="none",nbit = 100,gam=0.50)
 
 load("../R_Env_Quest/Fem_Age_cut1_gam25_true_none_100_RESULTSBIEN.RData")
 
 save.image("../R_Env_Quest/NetworkAnalyseTOUT.RData")
 
+
+
+
+###
+##
+# analyse lm --------------------------------
+"""
+library(ggeffects)
+############D_cons_soi
+lm1_age_D1<-lm(D1_priv ~ A3_age_m, data = Measure_Network )
+lm2_age_D1<-lm(D1_priv ~ poly(A3_age_m,2), data = Measure_Network )
+lm3_age_D1<-lm(D1_priv ~ poly(A3_age_m,3), data = Measure_Network )
+lm4_age_D1<-lm(D1_priv ~ log(A3_age_m), data = Measure_Network )
+
+anova(lm1_age_D1,lm2_age_D1,lm3_age_D1,lm4_age_D1)
+
+modtoplot=ggpredict(lm2_age_D1, c('A3_age_m[all]')) 
+plot(modtoplot,rawdata = TRUE)
+
+modtoplot=ggpredict(lm4_age_D1, c('A3_age_m[all]')) 
+plot(modtoplot,rawdata = TRUE)
+
+lm1_pub_D1<-lm(D1_priv ~ B_puberte, data = Measure_Network )
+lm2_pub_D1<-lm(D1_priv ~ poly(B_puberte,2), data = Measure_Network )
+lm3_pub_D1<-lm(D1_priv ~ poly(B_puberte,3), data = Measure_Network )
+lm4_pub_D1<-lm(D1_priv ~ log(B_puberte), data = Measure_Network )
+
+anova(lm1_pub_D1,lm2_pub_D1,lm3_pub_D1,lm4_pub_D1)
+
+modtoplot=ggpredict(lm2_pub_D1, c('B_puberte[all]')) 
+plot(modtoplot,rawdata = TRUE)
+
+
+lm2_age_D1_sexe<-lm(D1_priv ~ poly(A3_age_m,2)*A1_sexe, data = Measure_Network )
+anova(lm2_age_D1,lm2_age_D1_sexe)
+modtoplot=ggpredict(lm2_age_D1_sexe, c('A3_age_m[all]','A1_sexe')) 
+plot(modtoplot,rawdata = TRUE)
+
+
+
+##recherche inflexion age puberté
+
+mod_age<-lm(D1_priv ~ poly(A3_age_m,2,raw=TRUE), data = subset(Measure_Network, A1_sexe == '1') )
+modtoplot=ggpredict(mod_age, c('A3_age_m[all]')) 
+plot(modtoplot,rawdata = TRUE)
+
+sum_age<-summary(mod_age,ddf = 'Kenward-Roger')
+a<-sum_age$coefficients['(Intercept)','Estimate']
+b1<-sum_age$coefficients['poly(A3_age_m, 2, raw = TRUE)1','Estimate']
+b2<-sum_age$coefficients['poly(A3_age_m, 2, raw = TRUE)2','Estimate']
+
+f <- function(x) { a +(b1*x)+(b2*x^2) }
+curve(f(x),xlim = c(100,300))
+
+#calcul de la dérivé
+f_prime <- function(x) { b1 + 2*b2*x }
+curve(f_prime(x), xlim = c(100,300))
+p_inf1_RV2_touch_age<- (uniroot(f_prime, interval = c(150,300))[[1]])/12
+
+
+mod_pub<-lm(D1_priv ~ poly(B_puberte,2,raw=TRUE), data =  subset(Measure_Network, A1_sexe == '1') )
+modtoplot=ggpredict(mod_pub, c('B_puberte[all]')) 
+plot(modtoplot,rawdata = TRUE)
+
+sum_pub<-summary(mod_pub,ddf = 'Kenward-Roger', raw = TRUE)
+a<-sum_pub$coefficients['(Intercept)','Estimate']
+b1<-sum_pub$coefficients['poly(B_puberte, 2, raw = TRUE)1','Estimate']
+b2<-sum_pub$coefficients['poly(B_puberte, 2, raw = TRUE)2','Estimate']
+
+f <- function(x) { a +(b1*x)+(b2*x^2) }
+curve(f(x), xlim = c(1,5))
+
+#calcul de la dérivé
+f_prime <- function(x) { b1 + 2*b2*x }
+curve(f_prime(x), xlim = c(1,5))
+p_inf1_RV2_touch_pub<- uniroot(f_prime, interval = c(4,5))[[1]] 
+
+
+############K6
+lm1_age_K6<-lm(K6_trust ~ A3_age_m*A1_sexe, data = Measure_Network )
+lm2_age_K6<-lm(K6_trust ~ poly(A3_age_m,2)*A1_sexe, data = Measure_Network )
+lm3_age_K6<-lm(K6_trust ~ poly(A3_age_m,3)*A1_sexe, data = Measure_Network )
+lm4_age_K6<-lm(K6_trust ~ log(A3_age_m)*A1_sexe, data = Measure_Network )
+
+anova(lm1_age_K6,lm2_age_K6,lm3_age_K6,lm4_age_K6)
+
+
+
+modtoplot=ggpredict(lm2_age_K6, c('A3_age_m[all]', 'A1_sexe')) 
+plot(modtoplot,rawdata = TRUE)
+
+modtoplot=ggpredict(lm3_age_K6, c('A3_age_m[all]', 'A1_sexe')) 
+plot(modtoplot,rawdata = TRUE)
+
+modtoplot=ggpredict(lm4_age_K6, c('A3_age_m[all]')) 
+plot(modtoplot,rawdata = TRUE)
+
+lm1_pub_K6<-lm(K6_trust ~ B_puberte, data = Measure_Network )
+lm2_pub_K6<-lm(K6_trust ~ poly(B_puberte,2), data = Measure_Network )
+lm3_pub_K6<-lm(K6_trust ~ poly(B_puberte,3), data = Measure_Network )
+lm4_pub_K6<-lm(K6_trust ~ log(B_puberte), data = Measure_Network )
+
+anova(lm1_pub_K6,lm2_pub_K6,lm3_pub_K6,lm4_pub_K6)
+anova(lm3_pub_K6)
+
+modtoplot=ggpredict(lm3_pub_K6, c('B_puberte[all]')) 
+plot(modtoplot,rawdata = TRUE)
+
+
+lm2_age_K6_sexe<-lm(K6_trust ~ poly(A3_age_m,2)*A1_sexe, data = Measure_Network )
+anova(lm2_age_K6,lm2_age_K6_sexe)
+modtoplot=ggpredict(lm2_age_K6_sexe, c('A3_age_m[all]','A1_sexe')) 
+plot(modtoplot,rawdata = TRUE)
+
+"""
